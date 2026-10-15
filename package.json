@@ -1,0 +1,26 @@
+{
+  "name": "aks-89",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AnderZerfall/aks-89.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/AnderZerfall/aks-89/issues"
+  },
+  "homepage": "https://github.com/AnderZerfall/aks-89#readme",
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@vercel/node": "^24.0.1",
+    "typescript": "^7.0.2"
+  }
+}
