@@ -4,5 +4,14 @@
       "path": "/api/cron/olx",
       "schedule": "0 9 * * *"
     }
+  ],
+  "functions": {
+    "api/**/*.ts": {
+      "maxDuration": 10
+    }
+  },
+  "rewrites": [
+    { "source": "/api/olx/callback", "destination": "/api/olx/callback" },
+    { "source": "/api/cron/olx", "destination": "/api/cron/olx" }
   ]
 }
