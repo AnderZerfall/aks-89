@@ -17,7 +17,7 @@
   "homepage": "https://github.com/AnderZerfall/aks-89#readme",
   "devDependencies": {
     "@types/node": "^26.6.5",
-    "@vercel/node": "^24.0.1",
+    "@vercel/node": "^4.0.0",
     "typescript": "^5.3.3"
   }
 }
