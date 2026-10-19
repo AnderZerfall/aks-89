@@ -35,7 +35,7 @@ function toDomain(dto: OlxAdvert): Product {
     prices: [
       {
         price_type_id: 1,
-        value: Number(priceValue),
+        price: Number(priceValue),
         currency: currency,
       },
     ],

@@ -6,7 +6,7 @@ export type UspacyProductType = "goods" | "service";
 
 export type UspacyPriceDto = {
   price_type_id: number;
-  value: number;
+  price: number;
   currency: string;
 };
 
