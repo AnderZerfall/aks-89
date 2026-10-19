@@ -1,5 +1,12 @@
 import { OLX_ROUTES } from "../types/constants/routes.js";
-import type { OlxAdvertsResponseDto } from "../types/dto/olx/olx-adverts.dto.js";
+import type {
+  CreateOlxAdvertRequestDto,
+  CreateOlxAdvertResponseDto,
+  DeactivateRequestDto,
+  OlxAdvertsResponseDto,
+  UpdateOlxAdvertRequestDto,
+  UpdateOlxAdvertResponseDto,
+} from "../types/dto/olx/olx-adverts.dto.js";
 import type {
   OlxAuthRequestDto,
   OlxAuthResponseDto,
@@ -56,5 +63,85 @@ export const OlxService = {
 
     Logger.info("Posts retrived successfully!", posts);
     return posts;
+  },
+  createPost: async ({
+    accessToken,
+    payload,
+  }: {
+    accessToken: string;
+    payload: CreateOlxAdvertRequestDto;
+  }) => {
+    const response = await createRequestWithAuth<
+      CreateOlxAdvertRequestDto,
+      CreateOlxAdvertResponseDto
+    >(OLX_ROUTES.createPost.url, accessToken, {
+      method: OLX_ROUTES.createPost.method,
+      headers: {
+        ["Version"]: "2.0",
+      },
+      body: payload,
+    });
+
+    if (!response.data) {
+      Logger.error("Something went wrong during creation");
+    }
+
+    const createdPost = response.data;
+
+    Logger.info("Post was successfully created!", createdPost);
+    return createdPost;
+  },
+  updatePost: async ({
+    accessToken,
+    advertId,
+    payload,
+  }: {
+    accessToken: string;
+    advertId: string;
+    payload: UpdateOlxAdvertRequestDto;
+  }) => {
+    const response = await createRequestWithAuth<
+      UpdateOlxAdvertRequestDto,
+      UpdateOlxAdvertResponseDto
+    >(OLX_ROUTES.updatePost.url(advertId), accessToken, {
+      method: OLX_ROUTES.updatePost.method,
+      headers: {
+        ["Version"]: "2.0",
+      },
+      body: payload,
+    });
+
+    if (!response.data) {
+      Logger.info("Something went wrong during update");
+    }
+
+    const updatedPost = response.data;
+
+    Logger.info("Post was successfully updated!", updatedPost);
+    return updatedPost;
+  },
+  deactivatePost: async ({
+    accessToken,
+    advertId,
+    payload,
+  }: {
+    accessToken: string;
+    advertId: string;
+    payload: DeactivateRequestDto;
+  }) => {
+    const response = await createRequestWithAuth<DeactivateRequestDto, {}>(
+      OLX_ROUTES.takeActionOnPost.url(advertId),
+      accessToken,
+      {
+        method: OLX_ROUTES.takeActionOnPost.method,
+        headers: {
+          ["Version"]: "2.0",
+        },
+        body: payload,
+      },
+    );
+
+    Logger.info("Post was successfully deactivated!", advertId);
+    return;
   },
 };

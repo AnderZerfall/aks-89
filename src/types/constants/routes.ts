@@ -30,9 +30,61 @@ export const OLX_ROUTES = {
     url: (threadId: string) =>
       `https://www.olx.ua/api/partner/threads/${threadId}/messages`,
   },
+  addLogo: {
+    method: "POST",
+    url: (advertId: string) =>
+      "https://www.olx.ua/api/partner/adverts/${advertId}/logos",
+  },
+  getLogos: {
+    method: "GET",
+    url: (advertId: string) =>
+      "https://www.olx.ua/api/partner/adverts/${advertId}/logos",
+  },
 };
 
+const USPACY_INCOMMING_WEBHOOK =
+  "https://aksestate.uspacy.ua/company/v1/incoming_webhooks/run/aKmzP2NLdzSQsZ9hAt1K696I9nTPAQeG";
+
 export const USPACY_ROUTES = {
-  webhook:
-    "https://aksestate.uspacy.ua/company/v1/incoming_webhooks/run/aKmzP2NLdzSQsZ9hAt1K696I9nTPAQeG",
+  createEntity: {
+    method: "POST",
+    url: `${USPACY_INCOMMING_WEBHOOK}/crm/v1/entity`,
+  },
+  updateEntity: {
+    method: "PATCH",
+    url: (entityId: string) =>
+      `${USPACY_INCOMMING_WEBHOOK}/crm/v1/entity/${entityId}`,
+  },
+  deleteEntity: {
+    method: "delete",
+    url: (entityId: string) =>
+      `${USPACY_INCOMMING_WEBHOOK}/crm/v1/entity/${entityId}`,
+  },
+  getProduct: {
+    method: "GET",
+    url: (productId: string) =>
+      `${USPACY_INCOMMING_WEBHOOK}/crm/v1/static/products/${productId}`,
+  },
+  listProducts: {
+    method: "GET",
+    url: `${USPACY_INCOMMING_WEBHOOK}/crm/v1/static/products`,
+  },
+  createProduct: {
+    method: "POST",
+    url: `${USPACY_INCOMMING_WEBHOOK}/crm/v1/static/products`,
+  },
+  bulkCreateProducts: {
+    method: "POST",
+    url: `${USPACY_INCOMMING_WEBHOOK}/crm/v1/static/products/bulk`,
+  },
+  updateProduct: {
+    method: "PATCH",
+    url: (productId: string) =>
+      `${USPACY_INCOMMING_WEBHOOK}/crm/v1/static/products/${productId}`,
+  },
+  deleteProduct: {
+    method: "DELETE",
+    url: (productId: string) =>
+      `${USPACY_INCOMMING_WEBHOOK}/crm/v1/static/products/${productId}`,
+  },
 };
