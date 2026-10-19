@@ -1,5 +1,5 @@
 export type RequestOptions<TRequestType> = {
-  method: "GET" | "POST";
+  method: string;
   body?: TRequestType;
   headers?: Record<string, string>;
 };

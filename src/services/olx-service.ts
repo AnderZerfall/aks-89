@@ -13,9 +13,9 @@ import { Logger } from "../utils/logger.js";
 export const OlxService = {
   refreshTokens: async () => {
     const response = await createRequest<OlxAuthRequestDto, OlxAuthResponseDto>(
-      OLX_ROUTES.auth,
+      OLX_ROUTES.auth.url,
       {
-        method: "POST",
+        method: OLX_ROUTES.auth.method,
         body: {
           grant_type: "refresh_token",
           client_id: process.env.OLX_CLIENT_ID || "client_id",
@@ -38,10 +38,10 @@ export const OlxService = {
   },
   getPosts: async (accessToken: string) => {
     const response = await createRequestWithAuth<{}, OlxAdvertsResponseDto>(
-      OLX_ROUTES.getPosts,
+      OLX_ROUTES.getPosts.url,
       accessToken,
       {
-        method: "GET",
+        method: OLX_ROUTES.getPosts.method,
         headers: {
           ["Version"]: "2.0",
         },
