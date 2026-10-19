@@ -7,7 +7,7 @@ const handler = createHandler(async () => {
   const accessToken = await OlxService.refreshTokens();
   const posts = await OlxService.getPosts(accessToken);
   const products = posts.map(OlxPostMapper.toDomain).filter(Boolean);
-  const response = Promise.all(
+  const response = await Promise.all(
     products.map((product) =>
       UspacyService.createProduct({
         payload: product,
