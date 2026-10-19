@@ -1,9 +1,33 @@
 export const OLX_ROUTES = {
-  auth: "https://www.olx.ua/api/open/oauth/token",
-  getPosts: "https://www.olx.ua/api/partner/adverts",
-  getThreads: "https://www.olx.ua/api/partner/threads",
-  getMessages: (threadId: string) =>
-    `https://www.olx.ua/api/partner/threads/${threadId}/messages`,
+  auth: {
+    method: "POST",
+    url: "https://www.olx.ua/api/open/oauth/token"
+  },
+  getPosts: {
+    method: "GET",
+    url: "https://www.olx.ua/api/partner/adverts"
+  },
+  createPost: {
+    method: "POST",
+    url: "https://www.olx.ua/api/partner/adverts"
+  },
+  updatePost: {
+    method: "POST",
+    url: (advertId: string) => `https://www.olx.ua/api/partner/adverts/${advertId}`
+  },
+  takeActionOnPost: {
+    method: "POST",
+    url: (advertId: string) => `https://www.olx.ua/api/partner/adverts/${advertId}/commands`
+  },
+  getThreads: {
+    method: "GET",
+    url: "https://www.olx.ua/api/partner/threads"
+  },
+  getMessages: {
+    method: "GET",
+    url: (threadId: string) =>
+    `https://www.olx.ua/api/partner/threads/${threadId}/messages`
+  },
 };
 
 export const USPACY_ROUTES = {
