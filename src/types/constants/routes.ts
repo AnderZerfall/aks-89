@@ -33,12 +33,36 @@ export const OLX_ROUTES = {
   addLogo: {
     method: "POST",
     url: (advertId: string) =>
-      "https://www.olx.ua/api/partner/adverts/${advertId}/logos",
+      `https://www.olx.ua/api/partner/adverts/${advertId}/logos`,
   },
   getLogos: {
     method: "GET",
     url: (advertId: string) =>
-      "https://www.olx.ua/api/partner/adverts/${advertId}/logos",
+      `https://www.olx.ua/api/partner/adverts/${advertId}/logos`,
+  },
+  getCategory: {
+    method: "GET",
+    url: (categoryId: string) =>
+      `https://www.olx.ua/api/partner/categories/${categoryId}`,
+  },
+  getRegion: {
+    method: "GET",
+    url: (regionId: string) =>
+      `https://www.olx.ua/api/partner/regions/${regionId}`,
+  },
+  getCity: {
+    method: "GET",
+    url: (cityId: string) => `https://www.olx.ua/api/partner/cities/${cityId}`,
+  },
+  getDistrict: {
+    method: "GET",
+    url: (districtId: string) =>
+      `https://www.olx.ua/api/partner/districts/${districtId}`,
+  },
+  getLocations: {
+    method: "GET",
+    url: (latitude: string, longitude: string) =>
+      `https://www.olx.ua/api/partner/locations?latitude=${latitude}&longitude=${longitude}`,
   },
 };
 

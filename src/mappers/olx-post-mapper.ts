@@ -1,6 +1,9 @@
-import type {
-  Product,
-  UspacyProductAvailability,
+import {
+  ProductAvailability,
+  ProductCategory,
+  ProductMeasurement,
+  ProductType,
+  type Product,
 } from "../types/domain/product.js";
 import type { OlxAdvert } from "../types/dto/olx/olx-adverts.dto.js";
 
@@ -13,18 +16,18 @@ function toDomain(dto: OlxAdvert): Product {
   const currency = dto.price?.currency || "UAH";
 
   const isActive = dto.status === "active";
-  const availability: UspacyProductAvailability = isActive
-    ? "available"
-    : "not_available";
+  const availability: ProductAvailability = isActive
+    ? ProductAvailability.Available
+    : ProductAvailability.NotAvailable;
 
   const imageUrls = dto.images ? dto.images.map((img) => img.url) : [];
 
   return {
-    product_category_id: 1,
-    measurement_unit_id: 1,
+    product_category_id: ProductCategory.FlatSell,
+    measurement_unit_id: ProductMeasurement.SquareMeters,
     title: dto.title,
     article: dto.external_id || dto.id.toString(),
-    type: "goods",
+    type: ProductType.Goods,
     is_active: isActive,
     availability: availability,
     quantity: 1,

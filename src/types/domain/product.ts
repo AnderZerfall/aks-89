@@ -1,29 +1,47 @@
-export type UspacyProductAvailability =
-  | "available"
-  | "not_available"
-  | "pending";
-export type UspacyProductType = "goods" | "service";
+export enum ProductAvailability {
+  Available = "available",
+  NotAvailable = "not_available",
+  Pending = "pending",
+}
 
-export type UspacyPriceDto = {
+export enum ProductType {
+  Goods = "goods",
+  Service = "service",
+}
+
+export enum ProductCategory {
+  FlatSell = 1,
+  CommercialSell = 2,
+  HouseSell = 3,
+  FlatRent = 4,
+  HouseRent = 5,
+  CommercialRent = 6,
+}
+
+export enum ProductMeasurement {
+  SquareMeters = 7,
+}
+
+export type Price = {
   price_type_id: number;
   price: number;
   currency: string;
 };
 
 export type Product = {
-  product_category_id: number;
-  measurement_unit_id: number;
+  product_category_id: ProductCategory;
+  measurement_unit_id: ProductMeasurement;
   title: string;
   article: string;
-  type: UspacyProductType;
+  type: ProductType;
   is_active: boolean;
-  availability: UspacyProductAvailability;
+  availability: ProductAvailability;
   quantity: number;
   reserved_quantity: number;
   description: string;
   comment?: string;
   link?: string;
-  prices: UspacyPriceDto[];
+  prices: Price[];
   files?: string[];
 };
 
