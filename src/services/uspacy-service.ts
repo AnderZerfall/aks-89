@@ -96,7 +96,7 @@ export const UspacyService = {
     );
 
     Logger.info("Product was successfully deleted!", productId);
-    return;
+    return response;
   },
   createEntity: async ({ payload }: { payload: CreateEntityRequest }) => {
     const response = await createRequest<CreateEntityRequest, Entity>(
@@ -145,6 +145,6 @@ export const UspacyService = {
     );
 
     Logger.info("Entity was successfully deleted!", entityId);
-    return;
+    return response;
   },
 };

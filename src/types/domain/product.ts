@@ -1,26 +1,4 @@
-export enum ProductAvailability {
-  Available = "available",
-  NotAvailable = "not_available",
-  Pending = "pending",
-}
-
-export enum ProductType {
-  Goods = "goods",
-  Service = "service",
-}
-
-export enum ProductCategory {
-  FlatSell = 1,
-  CommercialSell = 2,
-  HouseSell = 3,
-  FlatRent = 4,
-  HouseRent = 5,
-  CommercialRent = 6,
-}
-
-export enum ProductMeasurement {
-  SquareMeters = 7,
-}
+import type { ProductAvailability, ProductCategory, ProductMeasurement, ProductType } from "../constants/product.js";
 
 export type Price = {
   price_type_id: number;
@@ -50,9 +28,13 @@ export type ListProductParams = {
   list: number;
 };
 
-export type CreateProductRequest = {};
+export type CreateProductRequest = {
 
-export type UpdateProductRequest = {};
+};
+
+export type UpdateProductRequest = {
+  
+};
 
 export type CreateProductsBulkRequest = {
   products: CreateProductRequest[];

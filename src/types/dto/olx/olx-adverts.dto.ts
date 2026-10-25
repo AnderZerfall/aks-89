@@ -28,6 +28,15 @@ export type OlxAdvert = {
   images: OlxPhoto[];
 };
 
+export type OlxEnrichedAdvert = OlxAdvert & {
+  enrichedLocation: {
+    city: string;
+    district: string;
+    region: string;
+    address: string;
+  }
+}
+
 export type OlxAdvertsResponseDto = {
   data: OlxAdvert[];
 };

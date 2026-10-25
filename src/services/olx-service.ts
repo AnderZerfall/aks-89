@@ -1,9 +1,13 @@
+import { Placeholder } from "../types/constants/product.js";
 import { OLX_ROUTES } from "../types/constants/routes.js";
+import type { OlxAdvertCategory } from "../types/dto/olx/olx-advert-attribute.js";
 import type {
   CreateOlxAdvertRequestDto,
   CreateOlxAdvertResponseDto,
   DeactivateRequestDto,
+  OlxAdvert,
   OlxAdvertsResponseDto,
+  OlxEnrichedAdvert,
   UpdateOlxAdvertRequestDto,
   UpdateOlxAdvertResponseDto,
 } from "../types/dto/olx/olx-adverts.dto.js";
@@ -11,10 +15,12 @@ import type {
   OlxAuthRequestDto,
   OlxAuthResponseDto,
 } from "../types/dto/olx/olx-auth.dto.js";
+import type { OlxCityResponseDto, OlxDistrictResponseDto, OlxLocationResponseDto, OlxRegionResponseDto } from "../types/dto/olx/olx-location.dto.js";
 import {
   createRequest,
   createRequestWithAuth,
 } from "../utils/create-request.js";
+import { getStreetFromTitle } from "../utils/get-street-from-title.js";
 import { Logger } from "../utils/logger.js";
 
 export const OlxService = {
@@ -142,6 +148,180 @@ export const OlxService = {
     );
 
     Logger.info("Post was successfully deactivated!", advertId);
-    return;
+    return response;
   },
+  getCategory: async ({accessToken, categortId}: {accessToken: string, categortId: string}) => {
+    const response = await createRequestWithAuth<{}, OlxAdvertCategory>(
+      OLX_ROUTES.getCategory.url(categortId),
+      accessToken,
+      {
+        method: OLX_ROUTES.getCategory.method,
+        headers: {
+          ["Version"]: "2.0",
+        },
+      },
+    );
+
+    Logger.info("Category retrived successfully!", response);
+    return response;
+  },
+  getRegion: async ({accessToken, regionId}: {accessToken: string, regionId: string}) => {
+    const response = await createRequestWithAuth<{}, OlxRegionResponseDto>(
+      OLX_ROUTES.getRegion.url(regionId),
+      accessToken,
+      {
+        method: OLX_ROUTES.getRegion.method,
+        headers: {
+          ["Version"]: "2.0",
+        },
+      },
+    );
+
+    Logger.info("Region retrived successfully!", response);
+    return response;
+  },
+  getCity: async ({accessToken, cityId}: {accessToken: string, cityId: string}) => {
+    const response = await createRequestWithAuth<{}, OlxCityResponseDto>(
+      OLX_ROUTES.getCity.url(cityId),
+      accessToken,
+      {
+        method: OLX_ROUTES.getCity.method,
+        headers: {
+          ["Version"]: "2.0",
+        },
+      },
+    );
+
+    Logger.info("City retrived successfully!", response);
+    return response;
+  },
+  getDistrict: async ({accessToken, districtId}: {accessToken: string, districtId: string}) => {
+    const response = await createRequestWithAuth<{}, OlxDistrictResponseDto>(
+      OLX_ROUTES.getDistrict.url(districtId),
+      accessToken,
+      {
+        method: OLX_ROUTES.getDistrict.method,
+        headers: {
+          ["Version"]: "2.0",
+        },
+      },
+    );
+
+    Logger.info("District retrived successfully!", response);
+    return response;
+  },
+  getLocations: async ({accessToken, latitude, longitude}: {accessToken: string, latitude: string, longitude: string}) => {
+    const response = await createRequestWithAuth<{}, OlxLocationResponseDto>(
+      OLX_ROUTES.getLocations.url(latitude, longitude),
+      accessToken,
+      {
+        method: OLX_ROUTES.getLocations.method,
+        headers: {
+          ["Version"]: "2.0",
+        },
+      },
+    );
+
+    Logger.info("Location retrived successfully!", response);
+    return response;
+  },
+  getLocationByCords: async (accessToken: string, lat: number, lon: number) => {
+    const locData = await OlxService.getLocations({
+      accessToken,
+      latitude: lat.toString(),
+      longitude: lon.toString(),
+    });
+  
+    if (!Array.isArray(locData) || locData.length === 0 || !locData[0]) {
+      return { cityName: "not found", districtName: "not found", regionName: "not found" };
+    }
+  
+    const city = locData[0].city;
+    const district = locData[0].district;
+  
+    let cityName = "not found";
+    let regionName = "not found";
+  
+    if (city) {
+      cityName = city.name;
+      const regionData = await OlxService.getRegion({
+        accessToken,
+        regionId: city.region_id.toString(),
+      });
+      regionName = regionData?.name || "not found";
+    }
+  
+    const districtName = district?.name || "not found";
+    return { cityName, districtName, regionName };
+  },
+  getLocationByCity: async (accessToken: string, cityId: number) => {
+    const cityData = await OlxService.getCity({
+      accessToken,
+      cityId: cityId.toString(),
+    });
+  
+    if (!cityData) {
+      return { cityName: Placeholder.NotFound, regionName: Placeholder.NotFound };
+    }
+  
+    const regionData = await OlxService.getRegion({
+      accessToken,
+      regionId: cityData.region_id.toString(),
+    });
+  
+    return {
+      cityName: cityData.name,
+      regionName: regionData?.name || Placeholder.NotFound,
+    };
+  },
+
+  enrichPosts: async (accessToken: string, posts: OlxAdvert[]): Promise<OlxEnrichedAdvert[]> => {
+  return Promise.all(
+    posts.map(async (post) => {
+      let cityName: string = Placeholder.NotFound;
+      let districtName: string = Placeholder.NotFound;
+      let regionName: string = Placeholder.NotFound;
+
+      try {
+        if (post.location?.latitude && post.location?.longitude) {
+          const result = await OlxService.getLocationByCords(accessToken, post.location.latitude, post.location.longitude);
+          cityName = result.cityName;
+          districtName = result.districtName;
+          regionName = result.regionName;
+        } else if (post.location?.city_id) {
+          const result = await OlxService.getLocationByCity(accessToken, post.location.city_id);
+          cityName = result.cityName;
+          regionName = result.regionName;
+        }
+
+        if (post.location?.district_id && districtName === Placeholder.NotFound) {
+          const districtData = await OlxService.getDistrict({
+            accessToken,
+            districtId: post.location.district_id.toString(),
+          });
+          districtName = districtData?.name || Placeholder.NotFound;
+        }
+      } catch (error) {
+        Logger.error(`[Enricher] Failed to fetch location details for post ${post.id}:`, error);
+      }
+
+      const fullText = `${post.title} ${post.description || ""}`;
+      const address = getStreetFromTitle(fullText);
+
+      return {
+        ...post,
+        enrichedLocation: {
+          city: cityName,
+          district: districtName,
+          region: regionName,
+          address,
+        },
+      };
+    })
+  );
+}
 };
+
+
+
+

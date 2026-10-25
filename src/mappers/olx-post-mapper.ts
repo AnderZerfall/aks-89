@@ -1,17 +1,15 @@
+import { ProductCategory, ProductMeasurement, ProductType, ProductAvailability } from "../types/constants/product.js";
 import {
-  ProductAvailability,
-  ProductCategory,
-  ProductMeasurement,
-  ProductType,
   type Product,
 } from "../types/domain/product.js";
-import type { OlxAdvert } from "../types/dto/olx/olx-adverts.dto.js";
+import type {  OlxEnrichedAdvert } from "../types/dto/olx/olx-adverts.dto.js";
+import { CommentBuilder } from "../utils/location-util.js";
 
 export const OlxPostMapper = {
   toDomain,
 };
 
-function toDomain(dto: OlxAdvert): Product {
+function toDomain(dto: OlxEnrichedAdvert): Product {
   const priceValue = dto.price?.value || 0;
   const currency = dto.price?.currency || "UAH";
 
@@ -21,6 +19,15 @@ function toDomain(dto: OlxAdvert): Product {
     : ProductAvailability.NotAvailable;
 
   const imageUrls = dto.images ? dto.images.map((img) => img.url) : [];
+
+  const comment = CommentBuilder.buildLocationComment({
+    city: dto.enrichedLocation?.city || null,
+    region: dto.enrichedLocation?.region || null,
+    district: dto.enrichedLocation?.district || null,
+    address: dto.enrichedLocation?.address || null,
+    latitude: dto.location?.latitude ? String(dto.location.latitude) : null,
+    longitude: dto.location?.longitude ? String(dto.location.longitude) : null,
+  });
 
   return {
     product_category_id: ProductCategory.FlatSell,
@@ -33,7 +40,7 @@ function toDomain(dto: OlxAdvert): Product {
     quantity: 1,
     reserved_quantity: 0,
     description: dto.description || "",
-    // comment: `Місто: ${dto.location?.city?.name || "Не вказано"}, Адреса: ${advert.location?.address || "Не вказана"}`,
+    comment,
     link: dto.url || dto.external_url,
     prices: [
       {
