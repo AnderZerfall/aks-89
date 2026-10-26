@@ -91,7 +91,8 @@ export const USPACY_ROUTES = {
   },
   listProducts: {
     method: "GET",
-    url: `${USPACY_INCOMMING_WEBHOOK}/crm/v1/static/products`,
+    url: (page: number = 1, list: number = 20) =>
+      `${USPACY_INCOMMING_WEBHOOK}/crm/v1/static/products?page=${page}&list=${list}`,
   },
   createProduct: {
     method: "POST",
@@ -110,5 +111,9 @@ export const USPACY_ROUTES = {
     method: "DELETE",
     url: (productId: string) =>
       `${USPACY_INCOMMING_WEBHOOK}/crm/v1/static/products/${productId}`,
+  },
+  uploadFiles: {
+    method: "POST",
+    url: `${USPACY_INCOMMING_WEBHOOK}/files/v1/files`,
   },
 };

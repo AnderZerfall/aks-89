@@ -1,15 +1,18 @@
-import { ProductCategory, ProductMeasurement, ProductType, ProductAvailability } from "../types/constants/product.js";
 import {
-  type Product,
-} from "../types/domain/product.js";
-import type {  OlxEnrichedAdvert } from "../types/dto/olx/olx-adverts.dto.js";
+  ProductAvailability,
+  ProductCategory,
+  ProductMeasurement,
+  ProductType,
+} from "../types/constants/product.js";
+import { type CreateProductRequest } from "../types/domain/product.js";
+import type { OlxEnrichedAdvert } from "../types/dto/olx/olx-adverts.dto.js";
 import { CommentBuilder } from "../utils/location-util.js";
 
 export const OlxPostMapper = {
   toDomain,
 };
 
-function toDomain(dto: OlxEnrichedAdvert): Product {
+function toDomain(dto: OlxEnrichedAdvert): CreateProductRequest {
   const priceValue = dto.price?.value || 0;
   const currency = dto.price?.currency || "UAH";
 
@@ -29,6 +32,12 @@ function toDomain(dto: OlxEnrichedAdvert): Product {
     longitude: dto.location?.longitude ? String(dto.location.longitude) : null,
   });
 
+  const cleanLink = dto.url
+    ? dto.url.replace(/^https?:\/\//i, "")
+    : dto.external_url
+      ? dto.external_url.replace(/^https?:\/\//i, "")
+      : "";
+
   return {
     product_category_id: ProductCategory.FlatSell,
     measurement_unit_id: ProductMeasurement.SquareMeters,
@@ -41,7 +50,7 @@ function toDomain(dto: OlxEnrichedAdvert): Product {
     reserved_quantity: 0,
     description: dto.description || "",
     comment,
-    link: dto.url || dto.external_url,
+    link: cleanLink,
     prices: [
       {
         price_type_id: 1,

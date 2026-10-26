@@ -1,4 +1,9 @@
-import type { ProductAvailability, ProductCategory, ProductMeasurement, ProductType } from "../constants/product.js";
+import type {
+  ProductAvailability,
+  ProductCategory,
+  ProductMeasurement,
+  ProductType,
+} from "../constants/product.js";
 
 export type Price = {
   price_type_id: number;
@@ -7,6 +12,7 @@ export type Price = {
 };
 
 export type Product = {
+  id: string;
   product_category_id: ProductCategory;
   measurement_unit_id: ProductMeasurement;
   title: string;
@@ -29,11 +35,38 @@ export type ListProductParams = {
 };
 
 export type CreateProductRequest = {
-
+  product_category_id: ProductCategory;
+  measurement_unit_id: ProductMeasurement;
+  title: string;
+  article: string;
+  type: ProductType;
+  is_active: boolean;
+  availability: ProductAvailability;
+  quantity: number;
+  reserved_quantity: number;
+  description: string;
+  comment?: string;
+  link?: string;
+  prices: Price[];
+  files?: string[];
 };
 
 export type UpdateProductRequest = {
-  
+  id: string;
+  product_category_id: ProductCategory;
+  measurement_unit_id: ProductMeasurement;
+  title: string;
+  article: string;
+  type: ProductType;
+  is_active: boolean;
+  availability: ProductAvailability;
+  quantity: number;
+  reserved_quantity: number;
+  description: string;
+  comment?: string;
+  link?: string;
+  prices: Price[];
+  files?: string[];
 };
 
 export type CreateProductsBulkRequest = {

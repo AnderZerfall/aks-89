@@ -29,6 +29,17 @@ export const UspacyService = {
     Logger.info("Posts retrived successfully!", response);
     return response;
   },
+  listProducts: async (page: number, list: number) => {
+    const response = await createRequest<{}, { data: Product[] }>(
+      USPACY_ROUTES.listProducts.url(page, list),
+      {
+        method: USPACY_ROUTES.listProducts.method,
+      },
+    );
+
+    Logger.info("Posts retrived successfully!", response);
+    return response;
+  },
   createProduct: async ({ payload }: { payload: CreateProductRequest }) => {
     const response = await createRequest<CreateProductRequest, Product>(
       USPACY_ROUTES.createProduct.url,
@@ -146,5 +157,43 @@ export const UspacyService = {
 
     Logger.info("Entity was successfully deleted!", entityId);
     return response;
+  },
+  getRecentProducts: async () => {
+    let allProducts: any[] = [];
+    let page = 1;
+    let hasMore = true;
+    const limit = 20;
+    const maxPages = 5;
+
+    while (hasMore && page <= maxPages) {
+      try {
+        const response = await UspacyService.listProducts(page, limit);
+
+        const items = response?.data || [];
+
+        if (items.length === 0) {
+          hasMore = false;
+        } else {
+          allProducts = allProducts.concat(items);
+
+          if (items.length < limit) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        }
+      } catch (error) {
+        Logger.error(
+          `[UspacyService] Failed to fetch products page ${page}:`,
+          error,
+        );
+        hasMore = false;
+      }
+    }
+
+    Logger.info(
+      `[UspacyService] Fetched ${allProducts.length} recent products from Uspacy for cache.`,
+    );
+    return allProducts;
   },
 };

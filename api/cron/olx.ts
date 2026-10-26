@@ -1,7 +1,9 @@
 import { OlxPostMapper } from "../../src/mappers/olx-post-mapper.js";
 import { OlxService } from "../../src/services/olx-service.js";
+import { UspacyFileService } from "../../src/services/uspacy-file-service.js";
 import { UspacyService } from "../../src/services/uspacy-service.js";
 import { createHandler } from "../../src/utils/create-handler.js";
+import { CommentBuilder } from "../../src/utils/location-util.js";
 import { Logger } from "../../src/utils/logger.js";
 
 const handler = createHandler(async () => {
@@ -9,21 +11,56 @@ const handler = createHandler(async () => {
   const posts = await OlxService.getPosts(accessToken);
   const enrichedPosts = await OlxService.enrichPosts(accessToken, posts);
   const products = enrichedPosts.map(OlxPostMapper.toDomain).filter(Boolean);
-  
+
+  const existingProducts = await UspacyService.getRecentProducts();
+  const existingArticles = new Set(existingProducts.map((p) => p.article));
+  const existingLocationSignatures = new Set(
+    existingProducts
+      .map((p) => {
+        const parsedLoc = CommentBuilder.parseLocationFromComment(p.comment);
+        return parsedLoc
+          ? CommentBuilder.createLocationSignature(parsedLoc)
+          : null;
+      })
+      .filter(Boolean),
+  );
+
   const response = await Promise.all(
     products.map(async (product) => {
-      const existingProduct = await UspacyService.getProduct(product.article);
-
-      if (existingProduct) {
-        // Already exists: Ignore inbound changes. Uspacy is master.
-        Logger.info(`[Sync] Product with article "${product.article}" already exists in Uspacy. Skipping creation.`);
+      if (product.article && existingArticles.has(product.article)) {
+        Logger.info(
+          `[Sync] Product with article "${product.article}" already exists. Skipping.`,
+        );
         return null;
       }
 
-      Logger.info(`[Sync] Creating new product in Uspacy for article "${product.article}".`);
-      return UspacyService.createProduct({
-        payload: product,
-      });
+      const productLoc = CommentBuilder.parseLocationFromComment(
+        product.comment,
+      );
+      const productLocSig = productLoc
+        ? CommentBuilder.createLocationSignature(productLoc)
+        : null;
+
+      if (productLocSig && existingLocationSignatures.has(productLocSig)) {
+        Logger.info(
+          `[Sync] Duplicate found by location signature for article "${product.article}". Skipping.`,
+        );
+        return null;
+      }
+
+      Logger.info(
+        `[Sync] Creating new product in Uspacy for article "${product.article}".`,
+      );
+      const uploadedFiles = await UspacyFileService.uploadBatchImages(
+        product.files || [],
+      );
+
+      const created = await UspacyService.createProduct({ payload: product });
+
+      if (product.article) existingArticles.add(product.article);
+      if (productLocSig) existingLocationSignatures.add(productLocSig);
+
+      return created;
     }),
   );
 
@@ -37,7 +74,5 @@ const handler = createHandler(async () => {
   // 5. log new adverts
   // 6. save then to uspacy
 });
-
-
 
 export default handler;
