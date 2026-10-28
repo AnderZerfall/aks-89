@@ -32,11 +32,10 @@ function toDomain(dto: OlxEnrichedAdvert): CreateProductRequest {
     longitude: dto.location?.longitude ? String(dto.location.longitude) : null,
   });
 
-  const cleanLink = dto.url
-    ? dto.url.replace(/^https?:\/\//i, "")
-    : dto.external_url
-      ? dto.external_url.replace(/^https?:\/\//i, "")
-      : "";
+  const cleanLink = (dto.url || dto.external_url || "").replace(
+    /^https?:\/\//i,
+    "",
+  );
 
   return {
     product_category_id: ProductCategory.FlatSell,
@@ -48,7 +47,7 @@ function toDomain(dto: OlxEnrichedAdvert): CreateProductRequest {
     availability: availability,
     quantity: 1,
     reserved_quantity: 0,
-    description: dto.description || "",
+    description: [dto.description, ...imageUrls].filter(Boolean).join("\n"),
     comment,
     link: cleanLink,
     prices: [
@@ -58,6 +57,5 @@ function toDomain(dto: OlxEnrichedAdvert): CreateProductRequest {
         currency: currency,
       },
     ],
-    files: imageUrls,
   };
 }

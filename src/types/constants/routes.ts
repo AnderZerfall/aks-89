@@ -112,8 +112,4 @@ export const USPACY_ROUTES = {
     url: (productId: string) =>
       `${USPACY_INCOMMING_WEBHOOK}/crm/v1/static/products/${productId}`,
   },
-  uploadFiles: {
-    method: "POST",
-    url: `${USPACY_INCOMMING_WEBHOOK}/files/v1/files`,
-  },
 };

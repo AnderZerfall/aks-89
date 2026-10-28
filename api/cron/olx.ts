@@ -1,6 +1,5 @@
 import { OlxPostMapper } from "../../src/mappers/olx-post-mapper.js";
 import { OlxService } from "../../src/services/olx-service.js";
-import { UspacyFileService } from "../../src/services/uspacy-file-service.js";
 import { UspacyService } from "../../src/services/uspacy-service.js";
 import { createHandler } from "../../src/utils/create-handler.js";
 import { CommentBuilder } from "../../src/utils/location-util.js";
@@ -24,6 +23,14 @@ const handler = createHandler(async () => {
       })
       .filter(Boolean),
   );
+
+  posts.forEach(async (post) => {
+    const category = await OlxService.getCategory({
+      accessToken,
+      categortId: String(post.category_id),
+    });
+    Logger.info("Category", category);
+  });
 
   const response = await Promise.all(
     products.map(async (product) => {
@@ -51,10 +58,6 @@ const handler = createHandler(async () => {
       Logger.info(
         `[Sync] Creating new product in Uspacy for article "${product.article}".`,
       );
-      const uploadedFiles = await UspacyFileService.uploadBatchImages(
-        product.files || [],
-      );
-
       const created = await UspacyService.createProduct({ payload: product });
 
       if (product.article) existingArticles.add(product.article);
