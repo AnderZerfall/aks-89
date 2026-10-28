@@ -51,7 +51,7 @@ export const UspacyFileService = {
     } catch (error) {
       Logger.error(
         `[UspacyFileService] Failed to upload image ${imageUrl}:`,
-        error,
+        { error: error instanceof Error ? error.message : String(error) },
       );
       return null;
     }

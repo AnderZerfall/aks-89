@@ -183,10 +183,9 @@ export const UspacyService = {
           }
         }
       } catch (error) {
-        Logger.error(
-          `[UspacyService] Failed to fetch products page ${page}:`,
-          error,
-        );
+        Logger.error(`[UspacyService] Failed to fetch products page ${page}:`, {
+          error: error instanceof Error ? error.message : String(error),
+        });
         hasMore = false;
       }
     }
