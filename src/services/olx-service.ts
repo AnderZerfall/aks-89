@@ -176,6 +176,21 @@ export const OlxService = {
     Logger.info("Category retrived successfully!", response);
     return response;
   },
+  getCategories: async ({ accessToken }: { accessToken: string }) => {
+    const response = await createRequestWithAuth<{}, {}>(
+      OLX_ROUTES.getCategories.url,
+      accessToken,
+      {
+        method: OLX_ROUTES.getCategories.method,
+        headers: {
+          ["Version"]: "2.0",
+        },
+      },
+    );
+
+    Logger.info("Category retrived successfully!", response);
+    return response;
+  },
   getRegion: async ({
     accessToken,
     regionId,
