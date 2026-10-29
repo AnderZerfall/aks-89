@@ -122,6 +122,12 @@ export const OlxService = {
     advertId: string;
     payload: UpdateOlxAdvertRequestDto;
   }) => {
+    Logger.info("Updating OLX advert", {
+      advertId,
+      method: OLX_ROUTES.updatePost.method,
+      apiVersion: "2.0",
+    });
+
     const response = await createRequestWithAuth(
       OLX_ROUTES.updatePost.url(advertId),
       accessToken,

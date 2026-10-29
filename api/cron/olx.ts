@@ -1,5 +1,5 @@
-import { ProductCategoryMapper } from "../../src/mappers/product-category-mapper.js";
 import { OlxPostMapper } from "../../src/mappers/olx-post-mapper.js";
+import { ProductCategoryMapper } from "../../src/mappers/product-category-mapper.js";
 import { UspacyProductToOlxMapper } from "../../src/mappers/uspacy-product-to-olx-mapper.js";
 import { CloudinaryImageService } from "../../src/services/cloudinary-image-service.js";
 import { OlxService } from "../../src/services/olx-service.js";
@@ -95,9 +95,13 @@ async function importOlxPostsToUspacy(
       continue;
     }
 
-    await UspacyService.createProduct({
+    const createdProduct = await UspacyService.createProduct({
       payload: OlxPostMapper.toDomain(post),
     });
+    await OlxSyncStateService.saveImportedProductSyncAt(
+      article,
+      getProductSyncTimestamp(createdProduct) ?? new Date(),
+    );
     existingArticles.add(article);
     counts.imported++;
   }
@@ -165,7 +169,26 @@ async function synchronizeProduct({
     return;
   }
 
-  if (wasUpdatedAfter(product, syncCutoff)) {
+  let importedProductSyncAt =
+    await OlxSyncStateService.getImportedProductSyncAt(product.article);
+  if (
+    !importedProductSyncAt &&
+    matchingPost.externalId == null &&
+    matchingPost.id.toString() === product.article
+  ) {
+    importedProductSyncAt = getProductSyncTimestamp(product) ?? syncCutoff;
+    await OlxSyncStateService.saveImportedProductSyncAt(
+      product.article,
+      importedProductSyncAt,
+    );
+    Logger.info("Initialized sync baseline for OLX-imported product", {
+      article: product.article,
+      advertId: matchingPost.id,
+    });
+  }
+
+  const updateCutoff = importedProductSyncAt ?? syncCutoff;
+  if (wasUpdatedAfter(product, updateCutoff)) {
     const updatedPost = await updateOlxPost(accessToken, product, matchingPost);
     if (!updatedPost) {
       counts.skipped++;
@@ -173,6 +196,12 @@ async function synchronizeProduct({
       return;
     }
     postsByArticle.set(product.article, updatedPost);
+    if (importedProductSyncAt) {
+      await OlxSyncStateService.saveImportedProductSyncAt(
+        product.article,
+        getProductSyncTimestamp(product) ?? new Date(),
+      );
+    }
     counts.updated++;
     await synchronizePostStatus(accessToken, product, updatedPost, counts);
     return;
@@ -193,6 +222,13 @@ async function synchronizeProduct({
     });
   }
   await synchronizePostStatus(accessToken, product, matchingPost, counts);
+}
+
+function getProductSyncTimestamp(product: Product): Date | null {
+  if (!product.updatedAt) return null;
+
+  const timestamp = new Date(product.updatedAt);
+  return Number.isNaN(timestamp.getTime()) ? null : timestamp;
 }
 
 function wasUpdatedAfter(product: Product, cutoff: Date): boolean {
@@ -224,16 +260,32 @@ async function updateOlxPost(
   product: Product,
   matchingPost: OlxAdvert,
 ): Promise<OlxAdvert | null> {
-  const location = await getOlxLocationFromComment(accessToken, product);
+  if (!matchingPost.contact) {
+    Logger.warn("Skipping OLX update because advert has no contact details", {
+      advertId: matchingPost.id,
+      article: product.article,
+    });
+    return null;
+  }
+
+  const location = await getOlxLocationFromComment(
+    accessToken,
+    product,
+    matchingPost.location,
+  );
   if (!location) return null;
 
   const images = await createWatermarkedImageUrls(product);
-  const payload = UspacyProductToOlxMapper.toCreateRequest(
-    product,
-    images,
-    location,
-    matchingPost.categoryId,
-  );
+  const payload = {
+    ...UspacyProductToOlxMapper.toCreateRequest(
+      product,
+      images,
+      location,
+      matchingPost.categoryId,
+    ),
+    attributes: matchingPost.attributes ?? [],
+    contact: matchingPost.contact,
+  };
 
   return OlxService.updatePost({
     accessToken,
@@ -261,16 +313,48 @@ async function createWatermarkedImageUrls(product: Product): Promise<string[]> {
 async function getOlxLocationFromComment(
   accessToken: string,
   product: Product,
+  existingLocation?: OlxAdvert["location"],
 ): Promise<CreateOlxAdvertRequestDto["location"] | null> {
   const parsedLocation = CommentBuilder.parseLocationFromComment(
     product.comment,
   );
-  const latitude = Number(parsedLocation?.latitude);
-  const longitude = Number(parsedLocation?.longitude);
+  const latitudeValue = parsedLocation?.latitude;
+  const longitudeValue = parsedLocation?.longitude;
+  const latitude =
+    latitudeValue == null ? Number.NaN : Number(latitudeValue);
+  const longitude =
+    longitudeValue == null ? Number.NaN : Number(longitudeValue);
 
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    if (existingLocation?.cityId != null) {
+      return {
+        cityId: existingLocation.cityId,
+        ...(existingLocation.districtId != null
+          ? { districtId: existingLocation.districtId }
+          : {}),
+        ...(existingLocation.latitude != null &&
+        Number.isFinite(Number(existingLocation.latitude))
+          ? { latitude: Number(existingLocation.latitude) }
+          : {}),
+        ...(existingLocation.longitude != null &&
+        Number.isFinite(Number(existingLocation.longitude))
+          ? { longitude: Number(existingLocation.longitude) }
+          : {}),
+      };
+    }
+
     Logger.warn("Skipping product with no valid coordinates in its comment", {
       productId: product.id,
+      article: product.article,
+      latitude: latitudeValue ?? null,
+      longitude: longitudeValue ?? null,
     });
     return null;
   }

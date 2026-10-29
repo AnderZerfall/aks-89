@@ -12,6 +12,14 @@ export const LocationDataSchema = z.object({
 
 export type LocationData = z.infer<typeof LocationDataSchema>;
 
+function normalizeLocationLabel(value: string): string {
+  return value
+    .normalize("NFKC")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .trim()
+    .toLocaleLowerCase("uk");
+}
+
 export const CommentBuilder = {
   buildLocationComment: (loc: LocationData): string => {
     return [
@@ -25,11 +33,18 @@ export const CommentBuilder = {
   parseLocationFromComment: (comment?: string): LocationData | null => {
     if (!comment) return null;
 
-    const extract = (key: LocationCommentKey) => {
-      const regex = new RegExp(`${key}:\\s*([^|]+)`, "i");
-      const match = regex.exec(comment);
+    const values = new Map<string, string>();
+    for (const part of comment.split("|")) {
+      const separatorIndex = part.indexOf(":");
+      if (separatorIndex === -1) continue;
 
-      const val = match?.[1]?.trim();
+      const key = normalizeLocationLabel(part.slice(0, separatorIndex));
+      const value = part.slice(separatorIndex + 1).trim();
+      if (key && value) values.set(key, value);
+    }
+
+    const extract = (key: LocationCommentKey) => {
+      const val = values.get(normalizeLocationLabel(key));
       if (val === Placeholder.NotFound) return null;
 
       return val || null;

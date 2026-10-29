@@ -1,17 +1,12 @@
 import { z } from "zod";
-import {
-  OlxAdvertiserSchema,
-} from "../../constants/olx.js";
+import { OlxAdvertiserSchema } from "../../constants/olx.js";
 import { OlxAdvertAttributeSchema } from "./olx-advert-attribute.js";
 import { OlxContactSchema } from "./olx-contact.dto.js";
 import {
   OlxLocationResponseSchema,
   OlxLocationSchema,
 } from "./olx-location.dto.js";
-import {
-  OlxPriceResponseSchema,
-  OlxPriceSchema,
-} from "./olx-price.dto.js";
+import { OlxPriceResponseSchema, OlxPriceSchema } from "./olx-price.dto.js";
 
 export const OlxPhotoSchema = z.object({ url: z.string() }).loose();
 const OlxAdvertResponseStatusSchema = z.string().min(1);
@@ -90,8 +85,12 @@ export const CreateOlxAdvertResponseSchema = z.object({
   data: CreateOlxAdvertResponseDataSchema,
 });
 
-export const UpdateOlxAdvertRequestSchema =
-  CreateOlxAdvertRequestSchema.partial();
+export const UpdateOlxAdvertRequestSchema = CreateOlxAdvertRequestSchema.extend(
+  {
+    attributes: z.array(OlxAdvertAttributeSchema),
+    contact: OlxContactSchema,
+  },
+);
 export const UpdateOlxAdvertResponseSchema = CreateOlxAdvertResponseSchema;
 export const OlxStatusActionRequestSchema = z.object({
   command: z.enum(["activate", "deactivate"]),

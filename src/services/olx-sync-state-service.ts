@@ -3,6 +3,7 @@ import { z } from "zod";
 
 const SyncTimestampSchema = z.iso.datetime({ offset: true });
 const LAST_SYNC_KEY = "olx-sync:last-successful-at";
+const IMPORTED_PRODUCT_SYNC_KEY_PREFIX = "olx-sync:imported-product:";
 
 export const OlxSyncStateService = {
   getLastSuccessfulSync: async (): Promise<Date | null> => {
@@ -17,7 +18,28 @@ export const OlxSyncStateService = {
       SyncTimestampSchema.parse(timestamp.toISOString()),
     );
   },
+  getImportedProductSyncAt: async (article: string): Promise<Date | null> => {
+    const timestamp = await createRedisClient().get<string>(
+      getImportedProductSyncKey(article),
+    );
+    if (timestamp === null) return null;
+
+    return new Date(SyncTimestampSchema.parse(timestamp));
+  },
+  saveImportedProductSyncAt: async (
+    article: string,
+    timestamp: Date,
+  ): Promise<void> => {
+    await createRedisClient().set(
+      getImportedProductSyncKey(article),
+      SyncTimestampSchema.parse(timestamp.toISOString()),
+    );
+  },
 };
+
+function getImportedProductSyncKey(article: string): string {
+  return `${IMPORTED_PRODUCT_SYNC_KEY_PREFIX}${encodeURIComponent(article)}`;
+}
 
 function createRedisClient(): Redis {
   const url =

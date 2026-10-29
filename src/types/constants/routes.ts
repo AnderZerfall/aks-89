@@ -12,7 +12,7 @@ export const OLX_ROUTES = {
     url: "https://www.olx.ua/api/partner/adverts",
   },
   updatePost: {
-    method: "POST",
+    method: "PUT",
     url: (advertId: string) =>
       `https://www.olx.ua/api/partner/adverts/${advertId}`,
   },
