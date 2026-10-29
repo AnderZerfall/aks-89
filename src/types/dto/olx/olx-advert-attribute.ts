@@ -3,8 +3,8 @@ import { z } from "zod";
 export const OlxAdvertAttributeSchema = z
   .object({
     code: z.string(),
-    value: z.string().nullable(),
-    values: z.array(z.string()).nullable(),
+    value: z.string().nullable().optional(),
+    values: z.array(z.string()).nullable().optional(),
   })
   .loose();
 

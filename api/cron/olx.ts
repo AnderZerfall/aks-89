@@ -278,15 +278,17 @@ async function updateOlxPost(
   if (!location) return null;
 
   const images = await createWatermarkedImageUrls(product);
+  const mappedPayload = UspacyProductToOlxMapper.toCreateRequest(
+    product,
+    images,
+    location,
+    matchingPost.contact,
+    matchingPost.categoryId,
+    matchingPost.attributes,
+  );
   const payload = {
-    ...UspacyProductToOlxMapper.toCreateRequest(
-      product,
-      images,
-      location,
-      matchingPost.contact,
-      matchingPost.categoryId,
-    ),
-    attributes: matchingPost.attributes ?? [],
+    ...mappedPayload,
+    attributes: mappedPayload.attributes ?? [],
   };
 
   return OlxService.updatePost({
