@@ -30,6 +30,8 @@ export type OlxDistrictResponseDto = {
 };
 
 export type OlxLocationResponseDto = {
-  city: OlxCityResponseDto
-  district: OlxDistrictResponseDto
-}[];
+  data: {
+    city: OlxCityResponseDto;
+    district: OlxDistrictResponseDto | null;
+  }[];
+};

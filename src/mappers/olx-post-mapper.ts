@@ -1,12 +1,14 @@
 import {
   ProductAvailability,
-  ProductCategory,
   ProductMeasurement,
   ProductType,
 } from "../types/constants/product.js";
 import { type CreateProductRequest } from "../types/domain/product.js";
 import type { OlxEnrichedAdvert } from "../types/dto/olx/olx-adverts.dto.js";
+import { DescriptionBuilder } from "../utils/description-util.js";
 import { CommentBuilder } from "../utils/location-util.js";
+import { Price } from "../utils/price.js";
+import { OlxUspacyCategoryMapper } from "./olx-uspacy-category-mapper.js";
 
 export const OlxPostMapper = {
   toDomain,
@@ -38,7 +40,7 @@ function toDomain(dto: OlxEnrichedAdvert): CreateProductRequest {
   );
 
   return {
-    product_category_id: ProductCategory.FlatSell,
+    product_category_id: OlxUspacyCategoryMapper.toUspacy(dto.category_id),
     measurement_unit_id: ProductMeasurement.SquareMeters,
     title: dto.title,
     article: dto.external_id || dto.id.toString(),
@@ -47,14 +49,14 @@ function toDomain(dto: OlxEnrichedAdvert): CreateProductRequest {
     availability: availability,
     quantity: 1,
     reserved_quantity: 0,
-    description: [dto.description, ...imageUrls].filter(Boolean).join("\n"),
+    description: DescriptionBuilder.build(dto.description, imageUrls),
     comment,
     link: cleanLink,
     prices: [
       {
         price_type_id: 1,
-        price: Number(priceValue),
-        currency: currency,
+        price: Price.fromMinorUnits(Number(priceValue), currency),
+        currency,
       },
     ],
   };

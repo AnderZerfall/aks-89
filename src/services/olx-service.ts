@@ -25,7 +25,6 @@ import {
   createRequest,
   createRequestWithAuth,
 } from "../utils/create-request.js";
-import { getStreetFromTitle } from "../utils/get-street-from-title.js";
 import { Logger } from "../utils/logger.js";
 
 export const OlxService = {
@@ -284,19 +283,20 @@ export const OlxService = {
       longitude: lon.toString(),
     });
 
-    if (!Array.isArray(locData) || locData.length === 0 || !locData[0]) {
+    const location = locData.data[0];
+    if (!location) {
       return {
-        cityName: "not found",
-        districtName: "not found",
-        regionName: "not found",
+        cityName: Placeholder.NotFound,
+        districtName: Placeholder.NotFound,
+        regionName: Placeholder.NotFound,
       };
     }
 
-    const city = locData[0].city;
-    const district = locData[0].district;
+    const city = location.city;
+    const district = location.district;
 
-    let cityName = "not found";
-    let regionName = "not found";
+    let cityName: string = Placeholder.NotFound;
+    let regionName: string = Placeholder.NotFound;
 
     if (city) {
       cityName = city.name;
@@ -304,10 +304,10 @@ export const OlxService = {
         accessToken,
         regionId: city.region_id.toString(),
       });
-      regionName = regionData?.name || "not found";
+      regionName = regionData?.name || Placeholder.NotFound;
     }
 
-    const districtName = district?.name || "not found";
+    const districtName = district?.name || Placeholder.NotFound;
     return { cityName, districtName, regionName };
   },
   getLocationByCity: async (accessToken: string, cityId: number) => {
@@ -345,7 +345,10 @@ export const OlxService = {
         let regionName: string = Placeholder.NotFound;
 
         try {
-          if (post.location?.latitude && post.location?.longitude) {
+          if (
+            post.location?.latitude != null &&
+            post.location?.longitude != null
+          ) {
             const result = await OlxService.getLocationByCords(
               accessToken,
               post.location.latitude,
@@ -380,16 +383,13 @@ export const OlxService = {
           );
         }
 
-        const fullText = `${post.title} ${post.description || ""}`;
-        const address = getStreetFromTitle(fullText);
-
         return {
           ...post,
           enrichedLocation: {
             city: cityName,
             district: districtName,
             region: regionName,
-            address,
+            address: Placeholder.NotFound,
           },
         };
       }),

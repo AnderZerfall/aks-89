@@ -24,19 +24,6 @@ const handler = createHandler(async () => {
       .filter(Boolean),
   );
 
-  const categories = await OlxService.getCategories({
-    accessToken,
-  });
-  Logger.info("Categories", categories);
-
-  // posts.forEach(async (post) => {
-  //   const category = await OlxService.getCategory({
-  //     accessToken,
-  //     categortId: String(post.category_id),
-  //   });
-  //   Logger.info("Category", category);
-  // });
-
   const response = await Promise.all(
     products.map(async (product) => {
       if (product.article && existingArticles.has(product.article)) {
