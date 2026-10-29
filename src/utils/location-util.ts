@@ -34,7 +34,8 @@ export const CommentBuilder = {
     if (!comment) return null;
 
     const values = new Map<string, string>();
-    for (const part of comment.split("|")) {
+    const plainComment = comment.replace(/<[^>]*>/g, "");
+    for (const part of plainComment.split("|")) {
       const separatorIndex = part.indexOf(":");
       if (separatorIndex === -1) continue;
 
