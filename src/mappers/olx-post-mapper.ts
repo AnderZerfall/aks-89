@@ -7,7 +7,7 @@ import { type CreateProductRequest } from "../types/domain/product.js";
 import type { OlxEnrichedAdvert } from "../types/dto/olx/olx-adverts.dto.js";
 import { DescriptionBuilder } from "../utils/description-util.js";
 import { CommentBuilder } from "../utils/location-util.js";
-import { Price } from "../utils/price.js";
+import { Money } from "../utils/money.js";
 import { OlxUspacyCategoryMapper } from "./olx-uspacy-category-mapper.js";
 
 export const OlxPostMapper = {
@@ -15,8 +15,8 @@ export const OlxPostMapper = {
 };
 
 function toDomain(dto: OlxEnrichedAdvert): CreateProductRequest {
-  const priceValue = dto.price?.value || 0;
-  const currency = dto.price?.currency || "UAH";
+  const priceValue = dto.price.value;
+  const currency = dto.price.currency;
 
   const isActive = dto.status === "active";
   const availability: ProductAvailability = isActive
@@ -55,7 +55,7 @@ function toDomain(dto: OlxEnrichedAdvert): CreateProductRequest {
     prices: [
       {
         price_type_id: 1,
-        price: Price.fromMinorUnits(Number(priceValue), currency),
+        price: Money.toMinorUnits(priceValue, currency),
         currency,
       },
     ],

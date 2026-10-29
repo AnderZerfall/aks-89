@@ -208,8 +208,9 @@ export const OlxService = {
       },
     );
 
-    Logger.info("Region retrived successfully!", response);
-    return response;
+    const region = "data" in response ? response.data : response;
+    Logger.info("Region retrieved successfully!", region);
+    return region;
   },
   getCity: async ({
     accessToken,
@@ -307,7 +308,11 @@ export const OlxService = {
       regionName = regionData?.name || Placeholder.NotFound;
     }
 
-    const districtName = district?.name || Placeholder.NotFound;
+    const districtName =
+      district?.name ||
+      city?.municipality ||
+      city?.county ||
+      Placeholder.NotFound;
     return { cityName, districtName, regionName };
   },
   getLocationByCity: async (accessToken: string, cityId: number) => {

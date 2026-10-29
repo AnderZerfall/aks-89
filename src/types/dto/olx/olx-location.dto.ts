@@ -5,10 +5,16 @@ export type OlxLocationDto = {
   longitude: number;
 };
 
-export type OlxRegionResponseDto = {
+export type OlxRegionDto = {
   id: number;
   name: string;
 };
+
+export type OlxRegionResponseDto =
+  | OlxRegionDto
+  | {
+      data: OlxRegionDto;
+    };
 
 export type OlxCityResponseDto = {
   id: number;
