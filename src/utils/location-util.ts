@@ -15,7 +15,6 @@ export const CommentBuilder = {
       `${LocationCommentKey.City}: ${loc.city || Placeholder.NotFound}`,
       `${LocationCommentKey.Region}: ${loc.region || Placeholder.NotFound}`,
       `${LocationCommentKey.District}: ${loc.district || Placeholder.NotFound}`,
-      `${LocationCommentKey.Address}: ${loc.address || Placeholder.NotFound}`,
       `${LocationCommentKey.Latitude}: ${loc.latitude ?? Placeholder.NotFound}`,
       `${LocationCommentKey.Longitude}: ${loc.longitude ?? Placeholder.NotFound}`,
     ].join(" | ");
