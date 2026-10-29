@@ -1,100 +1,117 @@
-import type { OlxAdvertiser, OlxAdvertStatus } from "../../constants/olx.js";
-import type { OlxAdvertAttribute } from "./olx-advert-attribute.js";
-import type { OlxContactDto } from "./olx-contact.dto.js";
-import type { OlxLocationDto } from "./olx-location.dto.js";
-import type { OlxPriceDto } from "./olx-price.dto.js";
+import { z } from "zod";
+import {
+  OlxAdvertiserSchema,
+  OlxAdvertStatusSchema,
+} from "../../constants/olx.js";
+import { OlxAdvertAttributeSchema } from "./olx-advert-attribute.js";
+import { OlxContactSchema } from "./olx-contact.dto.js";
+import { OlxLocationSchema } from "./olx-location.dto.js";
+import { OlxPriceSchema } from "./olx-price.dto.js";
 
-export type OlxPhoto = {
-  url: string;
-}
+export const OlxPhotoSchema = z.object({ url: z.string() }).loose();
 
-export type OlxAdvert = {
-  id: number;
-  status: OlxAdvertStatus;
-  url: string;
-  created_at: Date;
-  activated_at: Date;
-  valid_to: string;
-  title: string;
-  description: string;
-  category_id: number;
-  advertiser_type: OlxAdvertiser;
-  external_id: string;
-  external_url: string;
-  contact: OlxContactDto;
-  location: OlxLocationDto;
-  attributes: OlxAdvertAttribute[]
-  price: OlxPriceDto;
-  images: OlxPhoto[];
-};
+export const OlxAdvertSchema = z
+  .object({
+    id: z.number(),
+    status: OlxAdvertStatusSchema,
+    url: z.string().optional(),
+    createdAt: z.string().optional(),
+    activatedAt: z.string().optional(),
+    validTo: z.string().optional(),
+    title: z.string(),
+    description: z.string(),
+    categoryId: z.number(),
+    advertiserType: OlxAdvertiserSchema.optional(),
+    externalId: z.string().optional(),
+    externalUrl: z.string().optional(),
+    contact: OlxContactSchema.optional(),
+    location: OlxLocationSchema.optional(),
+    attributes: z.array(OlxAdvertAttributeSchema).optional(),
+    price: OlxPriceSchema,
+    images: z.array(OlxPhotoSchema).optional(),
+  })
+  .loose();
 
-export type OlxEnrichedAdvert = OlxAdvert & {
-  enrichedLocation: {
-    city: string;
-    district: string;
-    region: string;
-    address: string;
-  }
-}
+export const OlxEnrichedAdvertSchema = OlxAdvertSchema.extend({
+  enrichedLocation: z.object({
+    city: z.string(),
+    district: z.string(),
+    region: z.string(),
+    address: z.string(),
+  }),
+});
 
-export type OlxAdvertsResponseDto = {
-  data: OlxAdvert[];
-};
+export const OlxAdvertsResponseSchema = z.object({
+  data: z.array(OlxAdvertSchema),
+});
 
-export type CreateOlxAdvertRequestDto = {
-  title: string;                 
-  description: string;           
-  category_id: number;           
-  advertiser_type: OlxAdvertiser; 
-  location: OlxLocationDto;
-  price: OlxPriceDto;
-  images?: OlxPhoto[];
-  attributes?: OlxAdvertAttribute[];
-  contact?: OlxContactDto
-  external_id?: string;
-  external_url?: string;
-}
+export const CreateOlxAdvertRequestSchema = z
+  .object({
+    title: z.string(),
+    description: z.string(),
+    categoryId: z.number(),
+    advertiserType: OlxAdvertiserSchema,
+    location: OlxLocationSchema,
+    price: OlxPriceSchema,
+    images: z.array(OlxPhotoSchema).optional(),
+    attributes: z.array(OlxAdvertAttributeSchema).optional(),
+    contact: OlxContactSchema.optional(),
+    externalId: z.string().optional(),
+    externalUrl: z.string().optional(),
+  })
+  .loose();
 
-export type CreateOlxAdvertResponseData =  {
-  id: number;                    
-  title: string;
-  description: string;
-  category_id: number;
-  status: OlxAdvertStatus;
-  url: string;                   
-  created_at: string;            
-  activated_at?: string;
-  valid_to?: string;             
-  location: OlxLocationDto;
-  price: OlxPriceDto;
-  photos: OlxPhoto[];
-  attributes?: OlxAdvertAttribute[];
-  external_id?: string;
-}
+export const CreateOlxAdvertResponseDataSchema = z
+  .object({
+    id: z.number(),
+    title: z.string(),
+    description: z.string(),
+    categoryId: z.number(),
+    status: OlxAdvertStatusSchema,
+    url: z.string(),
+    createdAt: z.string(),
+    activatedAt: z.string().optional(),
+    validTo: z.string().optional(),
+    location: OlxLocationSchema,
+    price: OlxPriceSchema,
+    photos: z.array(OlxPhotoSchema),
+    attributes: z.array(OlxAdvertAttributeSchema).optional(),
+    externalId: z.string().optional(),
+  })
+  .loose();
 
-export type  CreateOlxAdvertResponseDto = {
-  data: CreateOlxAdvertResponseData;
-}
+export const CreateOlxAdvertResponseSchema = z.object({
+  data: CreateOlxAdvertResponseDataSchema,
+});
 
-export type  UpdateOlxAdvertRequestDto = {
-  title?: string;                
-  description?: string;          
-  category_id?: number;          
-  advertiser_type?: OlxAdvertiser;
-  location?: OlxLocationDto;
-  price?: OlxPriceDto;
-  photos?: OlxPhoto[];        
-  attributes?: OlxAdvertAttribute[]; 
-  contact?: OlxContactDto;
-  external_id?: string;
-  external_url?: string;
-}
+export const UpdateOlxAdvertRequestSchema =
+  CreateOlxAdvertRequestSchema.partial();
+export const UpdateOlxAdvertResponseSchema = CreateOlxAdvertResponseSchema;
+export const OlxStatusActionRequestSchema = z.object({
+  command: z.enum(["activate", "deactivate"]),
+  isSuccess: z.boolean(),
+});
 
-export type UpdateOlxAdvertResponseDto = {
-  data: CreateOlxAdvertResponseData; 
-}
-
-export type DeactivateRequestDto = {
-  command: "deactivate";                
-  is_success: boolean;
-}
+export type OlxPhoto = z.infer<typeof OlxPhotoSchema>;
+export type OlxAdvert = z.infer<typeof OlxAdvertSchema>;
+export type OlxEnrichedAdvert = z.infer<typeof OlxEnrichedAdvertSchema>;
+export type OlxAdvertsResponseDto = z.infer<typeof OlxAdvertsResponseSchema>;
+export type CreateOlxAdvertRequestDto = z.infer<
+  typeof CreateOlxAdvertRequestSchema
+>;
+export type CreateOlxAdvertResponseData = z.infer<
+  typeof CreateOlxAdvertResponseDataSchema
+>;
+export type CreateOlxAdvertResponseDto = z.infer<
+  typeof CreateOlxAdvertResponseSchema
+>;
+export type UpdateOlxAdvertRequestDto = z.infer<
+  typeof UpdateOlxAdvertRequestSchema
+>;
+export type UpdateOlxAdvertResponseDto = z.infer<
+  typeof UpdateOlxAdvertResponseSchema
+>;
+export type OlxStatusActionRequestDto = z.infer<
+  typeof OlxStatusActionRequestSchema
+>;
+export type DeactivateRequestDto = OlxStatusActionRequestDto;

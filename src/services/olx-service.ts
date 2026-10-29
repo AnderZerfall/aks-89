@@ -1,48 +1,59 @@
 import { Placeholder } from "../types/constants/product.js";
 import { OLX_ROUTES } from "../types/constants/routes.js";
-import type { OlxAdvertCategory } from "../types/dto/olx/olx-advert-attribute.js";
+import { OlxAdvertCategorySchema } from "../types/dto/olx/olx-advert-attribute.js";
 import type {
   CreateOlxAdvertRequestDto,
-  CreateOlxAdvertResponseDto,
-  DeactivateRequestDto,
-  OlxAdvert,
-  OlxAdvertsResponseDto,
-  OlxEnrichedAdvert,
+  OlxStatusActionRequestDto,
   UpdateOlxAdvertRequestDto,
-  UpdateOlxAdvertResponseDto,
+} from "../types/dto/olx/olx-adverts.dto.js";
+import {
+  CreateOlxAdvertRequestSchema,
+  CreateOlxAdvertResponseSchema,
+  OlxAdvertsResponseSchema,
+  OlxStatusActionRequestSchema,
+  UpdateOlxAdvertRequestSchema,
+  UpdateOlxAdvertResponseSchema,
 } from "../types/dto/olx/olx-adverts.dto.js";
 import type {
-  OlxAuthRequestDto,
-  OlxAuthResponseDto,
+  OlxAdvert,
+  OlxEnrichedAdvert,
+} from "../types/dto/olx/olx-adverts.dto.js";
+import {
+  OlxAuthRequestSchema,
+  OlxAuthResponseSchema,
 } from "../types/dto/olx/olx-auth.dto.js";
-import type {
-  OlxCityResponseDto,
-  OlxDistrictResponseDto,
-  OlxLocationResponseDto,
-  OlxRegionResponseDto,
+import type { OlxRegionDto } from "../types/dto/olx/olx-location.dto.js";
+import {
+  OlxCitySchema,
+  OlxDistrictSchema,
+  OlxLocationResponseSchema,
+  OlxRegionSchema,
+  OlxRegionResponseSchema,
 } from "../types/dto/olx/olx-location.dto.js";
 import {
   createRequest,
   createRequestWithAuth,
+  EmptyObjectSchema,
+  NoRequestSchema,
+  UnknownObjectSchema,
 } from "../utils/create-request.js";
 import { Logger } from "../utils/logger.js";
 
 export const OlxService = {
   refreshTokens: async () => {
-    const response = await createRequest<OlxAuthRequestDto, OlxAuthResponseDto>(
-      OLX_ROUTES.auth.url,
-      {
-        method: OLX_ROUTES.auth.method,
-        body: {
-          grant_type: "refresh_token",
-          client_id: process.env.OLX_CLIENT_ID || "client_id",
-          client_secret: process.env.OLX_CLIENT_SECRET || "client_secret",
-          refresh_token: process.env.OLX_REFRESH_TOKEN || "refresh_token",
-        },
+    const response = await createRequest(OLX_ROUTES.auth.url, {
+      method: OLX_ROUTES.auth.method,
+      requestSchema: OlxAuthRequestSchema,
+      responseSchema: OlxAuthResponseSchema,
+      body: {
+        grantType: "refresh_token",
+        clientId: process.env.OLX_CLIENT_ID || "client_id",
+        clientSecret: process.env.OLX_CLIENT_SECRET || "client_secret",
+        refreshToken: process.env.OLX_REFRESH_TOKEN || "refresh_token",
       },
-    );
+    });
 
-    const accessToken = response.access_token;
+    const accessToken = response.accessToken;
 
     if (!accessToken) {
       throw new Error(
@@ -54,11 +65,13 @@ export const OlxService = {
     return accessToken;
   },
   getPosts: async (accessToken: string) => {
-    const response = await createRequestWithAuth<{}, OlxAdvertsResponseDto>(
+    const response = await createRequestWithAuth(
       OLX_ROUTES.getPosts.url,
       accessToken,
       {
         method: OLX_ROUTES.getPosts.method,
+        requestSchema: NoRequestSchema,
+        responseSchema: OlxAdvertsResponseSchema,
         headers: {
           ["Version"]: "2.0",
         },
@@ -81,20 +94,19 @@ export const OlxService = {
     accessToken: string;
     payload: CreateOlxAdvertRequestDto;
   }) => {
-    const response = await createRequestWithAuth<
-      CreateOlxAdvertRequestDto,
-      CreateOlxAdvertResponseDto
-    >(OLX_ROUTES.createPost.url, accessToken, {
-      method: OLX_ROUTES.createPost.method,
-      headers: {
-        ["Version"]: "2.0",
+    const response = await createRequestWithAuth(
+      OLX_ROUTES.createPost.url,
+      accessToken,
+      {
+        method: OLX_ROUTES.createPost.method,
+        requestSchema: CreateOlxAdvertRequestSchema,
+        responseSchema: CreateOlxAdvertResponseSchema,
+        headers: {
+          ["Version"]: "2.0",
+        },
+        body: payload,
       },
-      body: payload,
-    });
-
-    if (!response.data) {
-      Logger.error("Something went wrong during creation");
-    }
+    );
 
     const createdPost = response.data;
 
@@ -110,40 +122,13 @@ export const OlxService = {
     advertId: string;
     payload: UpdateOlxAdvertRequestDto;
   }) => {
-    const response = await createRequestWithAuth<
-      UpdateOlxAdvertRequestDto,
-      UpdateOlxAdvertResponseDto
-    >(OLX_ROUTES.updatePost.url(advertId), accessToken, {
-      method: OLX_ROUTES.updatePost.method,
-      headers: {
-        ["Version"]: "2.0",
-      },
-      body: payload,
-    });
-
-    if (!response.data) {
-      Logger.info("Something went wrong during update");
-    }
-
-    const updatedPost = response.data;
-
-    Logger.info("Post was successfully updated!", updatedPost);
-    return updatedPost;
-  },
-  deactivatePost: async ({
-    accessToken,
-    advertId,
-    payload,
-  }: {
-    accessToken: string;
-    advertId: string;
-    payload: DeactivateRequestDto;
-  }) => {
-    const response = await createRequestWithAuth<DeactivateRequestDto, {}>(
-      OLX_ROUTES.takeActionOnPost.url(advertId),
+    const response = await createRequestWithAuth(
+      OLX_ROUTES.updatePost.url(advertId),
       accessToken,
       {
-        method: OLX_ROUTES.takeActionOnPost.method,
+        method: OLX_ROUTES.updatePost.method,
+        requestSchema: UpdateOlxAdvertRequestSchema,
+        responseSchema: UpdateOlxAdvertResponseSchema,
         headers: {
           ["Version"]: "2.0",
         },
@@ -151,7 +136,35 @@ export const OlxService = {
       },
     );
 
-    Logger.info("Post was successfully deactivated!", advertId);
+    const updatedPost = response.data;
+
+    Logger.info("Post was successfully updated!", updatedPost);
+    return updatedPost;
+  },
+  setPostStatus: async ({
+    accessToken,
+    advertId,
+    command,
+  }: {
+    accessToken: string;
+    advertId: string;
+    command: OlxStatusActionRequestDto["command"];
+  }) => {
+    const response = await createRequestWithAuth(
+      OLX_ROUTES.takeActionOnPost.url(advertId),
+      accessToken,
+      {
+        method: OLX_ROUTES.takeActionOnPost.method,
+        requestSchema: OlxStatusActionRequestSchema,
+        responseSchema: EmptyObjectSchema,
+        headers: {
+          ["Version"]: "2.0",
+        },
+        body: { command, isSuccess: true },
+      },
+    );
+
+    Logger.info(`Post status command "${command}" was sent`, advertId);
     return response;
   },
   getCategory: async ({
@@ -161,11 +174,13 @@ export const OlxService = {
     accessToken: string;
     categortId: string;
   }) => {
-    const response = await createRequestWithAuth<{}, OlxAdvertCategory>(
+    const response = await createRequestWithAuth(
       OLX_ROUTES.getCategory.url(categortId),
       accessToken,
       {
         method: OLX_ROUTES.getCategory.method,
+        requestSchema: NoRequestSchema,
+        responseSchema: OlxAdvertCategorySchema,
         headers: {
           ["Version"]: "2.0",
         },
@@ -176,11 +191,13 @@ export const OlxService = {
     return response;
   },
   getCategories: async ({ accessToken }: { accessToken: string }) => {
-    const response = await createRequestWithAuth<{}, {}>(
+    const response = await createRequestWithAuth(
       OLX_ROUTES.getCategories.url,
       accessToken,
       {
         method: OLX_ROUTES.getCategories.method,
+        requestSchema: NoRequestSchema,
+        responseSchema: UnknownObjectSchema,
         headers: {
           ["Version"]: "2.0",
         },
@@ -196,20 +213,24 @@ export const OlxService = {
   }: {
     accessToken: string;
     regionId: string;
-  }) => {
-    const response = await createRequestWithAuth<{}, OlxRegionResponseDto>(
+  }): Promise<OlxRegionDto> => {
+    const response = await createRequestWithAuth(
       OLX_ROUTES.getRegion.url(regionId),
       accessToken,
       {
         method: OLX_ROUTES.getRegion.method,
+        requestSchema: NoRequestSchema,
+        responseSchema: OlxRegionResponseSchema,
         headers: {
           ["Version"]: "2.0",
         },
       },
     );
 
-    const region = "data" in response ? response.data : response;
-    Logger.info("Region retrieved successfully!", region);
+    const region = OlxRegionSchema.parse(
+      "data" in response ? response.data : response,
+    );
+    Logger.info("region retrieved successfully!", { region });
     return region;
   },
   getCity: async ({
@@ -219,18 +240,20 @@ export const OlxService = {
     accessToken: string;
     cityId: string;
   }) => {
-    const response = await createRequestWithAuth<{}, OlxCityResponseDto>(
+    const response = await createRequestWithAuth(
       OLX_ROUTES.getCity.url(cityId),
       accessToken,
       {
         method: OLX_ROUTES.getCity.method,
+        requestSchema: NoRequestSchema,
+        responseSchema: OlxCitySchema,
         headers: {
           ["Version"]: "2.0",
         },
       },
     );
 
-    Logger.info("City retrived successfully!", response);
+    Logger.info("city retrived successfully!", response);
     return response;
   },
   getDistrict: async ({
@@ -240,18 +263,20 @@ export const OlxService = {
     accessToken: string;
     districtId: string;
   }) => {
-    const response = await createRequestWithAuth<{}, OlxDistrictResponseDto>(
+    const response = await createRequestWithAuth(
       OLX_ROUTES.getDistrict.url(districtId),
       accessToken,
       {
         method: OLX_ROUTES.getDistrict.method,
+        requestSchema: NoRequestSchema,
+        responseSchema: OlxDistrictSchema,
         headers: {
           ["Version"]: "2.0",
         },
       },
     );
 
-    Logger.info("District retrived successfully!", response);
+    Logger.info("district retrived successfully!", response);
     return response;
   },
   getLocations: async ({
@@ -263,18 +288,20 @@ export const OlxService = {
     latitude: string;
     longitude: string;
   }) => {
-    const response = await createRequestWithAuth<{}, OlxLocationResponseDto>(
+    const response = await createRequestWithAuth(
       OLX_ROUTES.getLocations.url(latitude, longitude),
       accessToken,
       {
         method: OLX_ROUTES.getLocations.method,
+        requestSchema: NoRequestSchema,
+        responseSchema: OlxLocationResponseSchema,
         headers: {
           ["Version"]: "2.0",
         },
       },
     );
 
-    Logger.info("Location retrived successfully!", response);
+    Logger.info("location retrived successfully!", response);
     return response;
   },
   getLocationByCords: async (accessToken: string, lat: number, lon: number) => {
@@ -303,7 +330,7 @@ export const OlxService = {
       cityName = city.name;
       const regionData = await OlxService.getRegion({
         accessToken,
-        regionId: city.region_id.toString(),
+        regionId: city.regionId.toString(),
       });
       regionName = regionData?.name || Placeholder.NotFound;
     }
@@ -321,16 +348,9 @@ export const OlxService = {
       cityId: cityId.toString(),
     });
 
-    if (!cityData) {
-      return {
-        cityName: Placeholder.NotFound,
-        regionName: Placeholder.NotFound,
-      };
-    }
-
     const regionData = await OlxService.getRegion({
       accessToken,
-      regionId: cityData.region_id.toString(),
+      regionId: cityData.regionId.toString(),
     });
 
     return {
@@ -362,22 +382,22 @@ export const OlxService = {
             cityName = result.cityName;
             districtName = result.districtName;
             regionName = result.regionName;
-          } else if (post.location?.city_id) {
+          } else if (post.location?.cityId != null) {
             const result = await OlxService.getLocationByCity(
               accessToken,
-              post.location.city_id,
+              post.location.cityId,
             );
             cityName = result.cityName;
             regionName = result.regionName;
           }
 
           if (
-            post.location?.district_id &&
+            post.location?.districtId != null &&
             districtName === Placeholder.NotFound
           ) {
             const districtData = await OlxService.getDistrict({
               accessToken,
-              districtId: post.location.district_id.toString(),
+              districtId: post.location.districtId.toString(),
             });
             districtName = districtData?.name || Placeholder.NotFound;
           }

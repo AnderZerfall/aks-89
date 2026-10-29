@@ -1,8 +1,12 @@
 import { USPACY_ROUTES } from "../types/constants/routes.js";
 import type {
   CreateEntityRequest,
-  Entity,
   UpdateEntityRequest,
+} from "../types/domain/entity.js";
+import {
+  CreateEntityRequestSchema,
+  EntitySchema,
+  UpdateEntityRequestSchema,
 } from "../types/domain/entity.js";
 import type {
   CreateProductRequest,
@@ -10,30 +14,41 @@ import type {
   Product,
   UpdateProductRequest,
 } from "../types/domain/product.js";
-import { createRequest } from "../utils/create-request.js";
+import {
+  CreateProductRequestSchema,
+  CreateProductsBulkRequestSchema,
+  ListProductsResponseSchema,
+  ProductSchema,
+  UpdateProductRequestSchema,
+} from "../types/domain/product.js";
+import {
+  createRequest,
+  EmptyObjectSchema,
+  NoRequestSchema,
+} from "../utils/create-request.js";
 import { Logger } from "../utils/logger.js";
 
 export const UspacyService = {
   getProduct: async (productId: string) => {
-    const response = await createRequest<{}, Product>(
+    const response = await createRequest(
       USPACY_ROUTES.getProduct.url(productId),
       {
         method: USPACY_ROUTES.getProduct.method,
+        requestSchema: NoRequestSchema,
+        responseSchema: ProductSchema,
       },
     );
-
-    if (!response) {
-      Logger.info("Product was not found", productId);
-    }
 
     Logger.info("Posts retrived successfully!", response);
     return response;
   },
   listProducts: async (page: number, list: number) => {
-    const response = await createRequest<{}, { data: Product[] }>(
+    const response = await createRequest(
       USPACY_ROUTES.listProducts.url(page, list),
       {
         method: USPACY_ROUTES.listProducts.method,
+        requestSchema: NoRequestSchema,
+        responseSchema: ListProductsResponseSchema,
       },
     );
 
@@ -41,17 +56,15 @@ export const UspacyService = {
     return response;
   },
   createProduct: async ({ payload }: { payload: CreateProductRequest }) => {
-    const response = await createRequest<CreateProductRequest, Product>(
+    const response = await createRequest(
       USPACY_ROUTES.createProduct.url,
       {
         method: USPACY_ROUTES.createProduct.method,
+        requestSchema: CreateProductRequestSchema,
+        responseSchema: ProductSchema,
         body: payload,
       },
     );
-
-    if (!response) {
-      Logger.error("Something went wrong during creation", response);
-    }
 
     Logger.info("Product was successfully created!", response);
     return response;
@@ -61,17 +74,15 @@ export const UspacyService = {
   }: {
     payload: CreateProductsBulkRequest;
   }) => {
-    const response = await createRequest<CreateProductsBulkRequest, {}>(
+    const response = await createRequest(
       USPACY_ROUTES.bulkCreateProducts.url,
       {
         method: USPACY_ROUTES.bulkCreateProducts.method,
+        requestSchema: CreateProductsBulkRequestSchema,
+        responseSchema: EmptyObjectSchema,
         body: payload,
       },
     );
-
-    if (!response) {
-      Logger.error("Something went wrong during creation", response);
-    }
 
     Logger.info("Products (bulk) were successfully created!", response);
     return response;
@@ -83,26 +94,26 @@ export const UspacyService = {
     productId: string;
     payload: UpdateProductRequest;
   }) => {
-    const response = await createRequest<UpdateProductRequest, Product>(
+    const response = await createRequest(
       USPACY_ROUTES.updateProduct.url(productId),
       {
         method: USPACY_ROUTES.updateProduct.method,
+        requestSchema: UpdateProductRequestSchema,
+        responseSchema: ProductSchema,
         body: payload,
       },
     );
-
-    if (!response) {
-      Logger.info("Something went wrong during update");
-    }
 
     Logger.info("Product was successfully updated!", response);
     return response;
   },
   deleteProduct: async ({ productId }: { productId: string }) => {
-    const response = await createRequest<{}, {}>(
+    const response = await createRequest(
       USPACY_ROUTES.deleteProduct.url(productId),
       {
         method: USPACY_ROUTES.deleteProduct.method,
+        requestSchema: NoRequestSchema,
+        responseSchema: EmptyObjectSchema,
       },
     );
 
@@ -110,17 +121,15 @@ export const UspacyService = {
     return response;
   },
   createEntity: async ({ payload }: { payload: CreateEntityRequest }) => {
-    const response = await createRequest<CreateEntityRequest, Entity>(
+    const response = await createRequest(
       USPACY_ROUTES.createEntity.url,
       {
         method: USPACY_ROUTES.createEntity.method,
+        requestSchema: CreateEntityRequestSchema,
+        responseSchema: EntitySchema,
         body: payload,
       },
     );
-
-    if (!response) {
-      Logger.error("Something went wrong during creation", response);
-    }
 
     Logger.info("Entity was successfully created!", response);
     return response;
@@ -132,26 +141,26 @@ export const UspacyService = {
     entityId: string;
     payload: UpdateEntityRequest;
   }) => {
-    const response = await createRequest<UpdateEntityRequest, Entity>(
+    const response = await createRequest(
       USPACY_ROUTES.updateEntity.url(entityId),
       {
         method: USPACY_ROUTES.updateEntity.method,
+        requestSchema: UpdateEntityRequestSchema,
+        responseSchema: EntitySchema,
         body: payload,
       },
     );
-
-    if (!response) {
-      Logger.info("Something went wrong during update");
-    }
 
     Logger.info("Entity was successfully updated!", response);
     return response;
   },
   deleteEntity: async ({ entityId }: { entityId: string }) => {
-    const response = await createRequest<{}, {}>(
+    const response = await createRequest(
       USPACY_ROUTES.deleteEntity.url(entityId),
       {
         method: USPACY_ROUTES.deleteEntity.method,
+        requestSchema: NoRequestSchema,
+        responseSchema: EmptyObjectSchema,
       },
     );
 
@@ -159,35 +168,31 @@ export const UspacyService = {
     return response;
   },
   getRecentProducts: async () => {
-    let allProducts: any[] = [];
+    let allProducts: Product[] = [];
     let page = 1;
     let hasMore = true;
     const limit = 20;
-    const maxPages = 5;
+    const maxPages = 100;
 
     while (hasMore && page <= maxPages) {
-      try {
-        const response = await UspacyService.listProducts(page, limit);
+      const response = await UspacyService.listProducts(page, limit);
+      const items = response.data;
 
-        const items = response?.data || [];
+      if (items.length === 0) {
+        hasMore = false;
+      } else {
+        allProducts = allProducts.concat(items);
 
-        if (items.length === 0) {
+        if (items.length < limit) {
           hasMore = false;
         } else {
-          allProducts = allProducts.concat(items);
-
-          if (items.length < limit) {
-            hasMore = false;
-          } else {
-            page++;
-          }
+          page++;
         }
-      } catch (error) {
-        Logger.error(`[UspacyService] Failed to fetch products page ${page}:`, {
-          error: error instanceof Error ? error.message : String(error),
-        });
-        hasMore = false;
       }
+    }
+
+    if (hasMore) {
+      throw new Error(`Uspacy product pagination exceeded ${maxPages} pages`);
     }
 
     Logger.info(

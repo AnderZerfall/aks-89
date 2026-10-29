@@ -1,10 +1,15 @@
-export type OlxAuthRequestDto = {
-  grant_type: "refresh_token";
-  client_id: string;
-  client_secret: string;
-  refresh_token: string;
-};
+import { z } from "zod";
 
-export type OlxAuthResponseDto = {
-  access_token: string;
-};
+export const OlxAuthRequestSchema = z.object({
+  grantType: z.literal("refresh_token"),
+  clientId: z.string(),
+  clientSecret: z.string(),
+  refreshToken: z.string(),
+});
+
+export const OlxAuthResponseSchema = z.object({
+  accessToken: z.string(),
+});
+
+export type OlxAuthRequestDto = z.infer<typeof OlxAuthRequestSchema>;
+export type OlxAuthResponseDto = z.infer<typeof OlxAuthResponseSchema>;

@@ -27,7 +27,7 @@ export const DescriptionBuilder = {
           `<li><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Image ${index + 1}</a></li>`,
       );
     const imageSection = images.length
-      ? `<hr><p><strong>Images</strong></p><ul>${images.join("")}</ul>`
+      ? `<hr><p>images</p><ul>${images.join("")}</ul>`
       : "";
 
     return [formattedDescription, imageSection].filter(Boolean).join("\n");

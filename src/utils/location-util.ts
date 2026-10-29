@@ -1,22 +1,25 @@
+import { z } from "zod";
 import { LocationCommentKey, Placeholder } from "../types/constants/product.js";
 
-type LocationData = {
-  city: string | null;
-  region: string | null;
-  district: string | null;
-  address: string | null;
-  latitude: string | null;
-  longitude: string | null;
-};
+export const LocationDataSchema = z.object({
+  city: z.string().nullable(),
+  region: z.string().nullable(),
+  district: z.string().nullable(),
+  address: z.string().nullable(),
+  latitude: z.string().nullable(),
+  longitude: z.string().nullable(),
+});
+
+export type LocationData = z.infer<typeof LocationDataSchema>;
 
 export const CommentBuilder = {
   buildLocationComment: (loc: LocationData): string => {
     return [
-      `${LocationCommentKey.City}: ${loc.city || Placeholder.NotFound}`,
-      `${LocationCommentKey.Region}: ${loc.region || Placeholder.NotFound}`,
-      `${LocationCommentKey.District}: ${loc.district || Placeholder.NotFound}`,
-      `${LocationCommentKey.Latitude}: ${loc.latitude ?? Placeholder.NotFound}`,
-      `${LocationCommentKey.Longitude}: ${loc.longitude ?? Placeholder.NotFound}`,
+      `${LocationCommentKey.city}: ${loc.city || Placeholder.NotFound}`,
+      `${LocationCommentKey.region}: ${loc.region || Placeholder.NotFound}`,
+      `${LocationCommentKey.district}: ${loc.district || Placeholder.NotFound}`,
+      `${LocationCommentKey.latitude}: ${loc.latitude ?? Placeholder.NotFound}`,
+      `${LocationCommentKey.longitude}: ${loc.longitude ?? Placeholder.NotFound}`,
     ].join(" | ");
   },
   parseLocationFromComment: (comment?: string): LocationData | null => {
@@ -33,12 +36,12 @@ export const CommentBuilder = {
     };
 
     return {
-      city: extract(LocationCommentKey.City),
-      region: extract(LocationCommentKey.Region),
-      district: extract(LocationCommentKey.District),
-      address: extract(LocationCommentKey.Address),
-      latitude: extract(LocationCommentKey.Latitude),
-      longitude: extract(LocationCommentKey.Longitude),
+      city: extract(LocationCommentKey.city),
+      region: extract(LocationCommentKey.region),
+      district: extract(LocationCommentKey.district),
+      address: extract(LocationCommentKey.address),
+      latitude: extract(LocationCommentKey.latitude),
+      longitude: extract(LocationCommentKey.longitude),
     };
   },
   createLocationSignature: (loc: {
