@@ -11,6 +11,7 @@ const handler = createHandler(async () => {
   const enrichedPosts = await OlxService.enrichPosts(accessToken, posts);
   const products = enrichedPosts.map(OlxPostMapper.toDomain).filter(Boolean);
 
+  posts.forEach((post) => Logger.info(`[OLX] Raw posts`, post));
   const existingProducts = await UspacyService.getRecentProducts();
   const existingArticles = new Set(existingProducts.map((p) => p.article));
   const existingLocationSignatures = new Set(
