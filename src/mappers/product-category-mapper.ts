@@ -26,6 +26,8 @@ const USPACY_TO_OLX_CATEGORY_MAP: Record<ProductCategory, number> = {
 export const ProductCategoryMapper = {
   toUspacy,
   toOlx,
+  hasUspacyMapping: (categoryId: number) =>
+    Object.hasOwn(OLX_TO_USPACY_CATEGORY_MAP, categoryId),
 };
 
 function toUspacy(categoryId: number): ProductCategory {

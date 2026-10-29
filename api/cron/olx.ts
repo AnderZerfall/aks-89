@@ -1,4 +1,5 @@
 import { ProductCategoryMapper } from "../../src/mappers/product-category-mapper.js";
+import { OlxPostMapper } from "../../src/mappers/olx-post-mapper.js";
 import { UspacyProductToOlxMapper } from "../../src/mappers/uspacy-product-to-olx-mapper.js";
 import { CloudinaryImageService } from "../../src/services/cloudinary-image-service.js";
 import { OlxService } from "../../src/services/olx-service.js";
@@ -14,6 +15,7 @@ import { CommentBuilder } from "../../src/utils/location-util.js";
 import { Logger } from "../../src/utils/logger.js";
 
 type SyncCounts = {
+  imported: number;
   created: number;
   updated: number;
   statusChanges: number;
@@ -31,6 +33,7 @@ async function synchronizeOlxPosts() {
   const uspacyProducts = await UspacyService.getRecentProducts();
   const postsByArticle = indexOlxPostsByArticle(olxPosts);
   const counts: SyncCounts = {
+    imported: 0,
     created: 0,
     updated: 0,
     statusChanges: 0,
@@ -42,6 +45,8 @@ async function synchronizeOlxPosts() {
     olxPosts: olxPosts.length,
     syncCutoff: syncCutoff.toISOString(),
   });
+
+  await importOlxPostsToUspacy(accessToken, olxPosts, uspacyProducts, counts);
 
   for (const product of uspacyProducts) {
     await synchronizeProduct({
@@ -59,10 +64,62 @@ async function synchronizeOlxPosts() {
   return counts;
 }
 
-function indexOlxPostsByArticle(posts: OlxAdvert[]): Map<string, OlxAdvert> {
-  return new Map(
-    posts.map((post) => [post.externalId || post.id.toString(), post] as const),
+async function importOlxPostsToUspacy(
+  accessToken: string,
+  olxPosts: OlxAdvert[],
+  uspacyProducts: Product[],
+  counts: SyncCounts,
+): Promise<void> {
+  const existingArticles = new Set(
+    uspacyProducts.map((product) => product.article).filter(Boolean),
   );
+  const unmatchedPosts = olxPosts.filter((post) => {
+    return !hasMatchingUspacyProduct(post, existingArticles);
+  });
+  const enrichedPosts = await OlxService.enrichPosts(
+    accessToken,
+    unmatchedPosts,
+  );
+
+  for (const post of enrichedPosts) {
+    const article = post.externalId || post.id.toString();
+    if (hasMatchingUspacyProduct(post, existingArticles)) continue;
+
+    if (!ProductCategoryMapper.hasUspacyMapping(post.categoryId)) {
+      Logger.warn("Skipping OLX post with unmapped Uspacy category", {
+        advertId: post.id,
+        categoryId: post.categoryId,
+        article,
+      });
+      counts.skipped++;
+      continue;
+    }
+
+    await UspacyService.createProduct({
+      payload: OlxPostMapper.toDomain(post),
+    });
+    existingArticles.add(article);
+    counts.imported++;
+  }
+}
+
+function hasMatchingUspacyProduct(
+  post: OlxAdvert,
+  articles: Set<string>,
+): boolean {
+  return (
+    articles.has(post.id.toString()) ||
+    (post.externalId != null && articles.has(post.externalId))
+  );
+}
+
+function indexOlxPostsByArticle(posts: OlxAdvert[]): Map<string, OlxAdvert> {
+  const postsByArticle = new Map<string, OlxAdvert>();
+  for (const post of posts) {
+    postsByArticle.set(post.id.toString(), post);
+    if (post.externalId) postsByArticle.set(post.externalId, post);
+  }
+  return postsByArticle;
 }
 
 async function synchronizeProduct({
