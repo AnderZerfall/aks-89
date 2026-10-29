@@ -37,6 +37,13 @@ const ProductUpdatedAtSchema = z
     return new Date(milliseconds).toISOString();
   });
 
+const ProductFileSchema = z
+  .union([
+    z.string(),
+    z.object({ url: z.string() }).loose(),
+  ])
+  .transform((file) => (typeof file === "string" ? file : file.url));
+
 export const ProductSchema = z
   .object({
     id: ProductIdSchema,
@@ -46,15 +53,24 @@ export const ProductSchema = z
     article: z.string(),
     updatedAt: ProductUpdatedAtSchema.optional(),
     type: ProductTypeSchema,
-    isActive: z.boolean(),
+    isActive: z.union([z.boolean(), z.literal(0), z.literal(1)]).transform(
+      (isActive) => isActive === true || isActive === 1,
+    ),
     availability: ProductAvailabilitySchema,
-    quantity: z.number(),
-    reservedQuantity: z.number(),
+    quantity: z.number().nullable().transform((quantity) => quantity ?? 0),
+    reservedQuantity: z
+      .number()
+      .nullable()
+      .transform((quantity) => quantity ?? 0),
     description: z.string(),
     comment: z.string().optional(),
-    link: z.string().optional(),
+    link: z
+      .string()
+      .nullable()
+      .optional()
+      .transform((link) => link ?? undefined),
     prices: z.array(PriceSchema),
-    files: z.array(z.string()).optional(),
+    files: z.array(ProductFileSchema).optional(),
   })
   .loose();
 
