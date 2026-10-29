@@ -15,7 +15,7 @@ export const OlxPostMapper = {
 };
 
 function toDomain(dto: OlxEnrichedAdvert): CreateProductRequest {
-  const priceValue = dto.price.value;
+  const priceValue = Number(dto.price.value);
   const currency = dto.price.currency;
 
   const isActive = dto.status === "active";
