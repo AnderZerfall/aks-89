@@ -1,4 +1,5 @@
 import type { Product } from "../types/domain/product.js";
+import type { OlxContactDto } from "../types/dto/olx/olx-contact.dto.js";
 import type { CreateOlxAdvertRequestDto } from "../types/dto/olx/olx-adverts.dto.js";
 import { Price } from "../utils/price.js";
 import { ProductCategoryMapper } from "./product-category-mapper.js";
@@ -8,6 +9,7 @@ export const UspacyProductToOlxMapper = {
     product: Product,
     images: string[],
     location: CreateOlxAdvertRequestDto["location"],
+    contact: OlxContactDto,
     existingCategoryId?: number,
   ): CreateOlxAdvertRequestDto => {
     const categoryId =
@@ -34,6 +36,7 @@ export const UspacyProductToOlxMapper = {
       categoryId,
       advertiserType: "business",
       location,
+      contact,
       price: {
         value,
         currency,

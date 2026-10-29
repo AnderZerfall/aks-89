@@ -242,6 +242,7 @@ async function createOlxPost(
   accessToken: string,
   product: Product,
 ): Promise<OlxAdvert | null> {
+  const contact = getOlxContact();
   const location = await getOlxLocationFromComment(accessToken, product);
   if (!location) return null;
 
@@ -250,6 +251,7 @@ async function createOlxPost(
     product,
     images,
     location,
+    contact,
   );
 
   return OlxService.createPost({ accessToken, payload });
@@ -281,10 +283,10 @@ async function updateOlxPost(
       product,
       images,
       location,
+      matchingPost.contact,
       matchingPost.categoryId,
     ),
     attributes: matchingPost.attributes ?? [],
-    contact: matchingPost.contact,
   };
 
   return OlxService.updatePost({
@@ -292,6 +294,19 @@ async function updateOlxPost(
     advertId: matchingPost.id.toString(),
     payload,
   });
+}
+
+function getOlxContact(): NonNullable<CreateOlxAdvertRequestDto["contact"]> {
+  const name = process.env.OLX_CONTACT_NAME?.trim();
+  if (!name) {
+    throw new Error("Missing required environment variable OLX_CONTACT_NAME");
+  }
+
+  const phone = process.env.OLX_CONTACT_PHONE?.trim();
+  return {
+    name,
+    ...(phone ? { phone } : {}),
+  };
 }
 
 async function createWatermarkedImageUrls(product: Product): Promise<string[]> {

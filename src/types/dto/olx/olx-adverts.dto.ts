@@ -54,9 +54,9 @@ export const CreateOlxAdvertRequestSchema = z
     advertiserType: OlxAdvertiserSchema,
     location: OlxLocationSchema,
     price: OlxPriceSchema,
+    contact: OlxContactSchema,
     images: z.array(OlxPhotoSchema).optional(),
     attributes: z.array(OlxAdvertAttributeSchema).optional(),
-    contact: OlxContactSchema.optional(),
     externalId: z.string().nullable().optional(),
     externalUrl: z.string().nullable().optional(),
   })
@@ -88,7 +88,6 @@ export const CreateOlxAdvertResponseSchema = z.object({
 export const UpdateOlxAdvertRequestSchema = CreateOlxAdvertRequestSchema.extend(
   {
     attributes: z.array(OlxAdvertAttributeSchema),
-    contact: OlxContactSchema,
   },
 );
 export const UpdateOlxAdvertResponseSchema = CreateOlxAdvertResponseSchema;
