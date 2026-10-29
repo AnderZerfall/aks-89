@@ -1,7 +1,6 @@
 import { z } from "zod";
 import {
   OlxAdvertiserSchema,
-  OlxAdvertStatusSchema,
 } from "../../constants/olx.js";
 import { OlxAdvertAttributeSchema } from "./olx-advert-attribute.js";
 import { OlxContactSchema } from "./olx-contact.dto.js";
@@ -15,11 +14,12 @@ import {
 } from "./olx-price.dto.js";
 
 export const OlxPhotoSchema = z.object({ url: z.string() }).loose();
+const OlxAdvertResponseStatusSchema = z.string().min(1);
 
 export const OlxAdvertSchema = z
   .object({
     id: z.number(),
-    status: OlxAdvertStatusSchema,
+    status: OlxAdvertResponseStatusSchema,
     url: z.string().optional(),
     createdAt: z.string().optional(),
     activatedAt: z.string().optional(),
@@ -73,7 +73,7 @@ export const CreateOlxAdvertResponseDataSchema = z
     title: z.string(),
     description: z.string(),
     categoryId: z.number(),
-    status: OlxAdvertStatusSchema,
+    status: OlxAdvertResponseStatusSchema,
     url: z.string(),
     createdAt: z.string(),
     activatedAt: z.string().optional(),
