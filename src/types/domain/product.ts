@@ -12,14 +12,39 @@ export const PriceSchema = z.object({
   currency: z.string(),
 });
 
+const ProductIdSchema = z
+  .union([z.string(), z.number().int().safe()])
+  .transform(String);
+
+const ProductUpdatedAtSchema = z
+  .union([
+    z.string(),
+    z.number().finite().refine((timestamp) => {
+      const milliseconds =
+        Math.abs(timestamp) < 1_000_000_000_000
+          ? timestamp * 1000
+          : timestamp;
+      return Math.abs(milliseconds) <= 8_640_000_000_000_000;
+    }),
+  ])
+  .transform((updatedAt) => {
+    if (typeof updatedAt === "string") return updatedAt;
+
+    const milliseconds =
+      Math.abs(updatedAt) < 1_000_000_000_000
+        ? updatedAt * 1000
+        : updatedAt;
+    return new Date(milliseconds).toISOString();
+  });
+
 export const ProductSchema = z
   .object({
-    id: z.string(),
+    id: ProductIdSchema,
     productCategoryId: ProductCategorySchema,
     measurementUnitId: ProductMeasurementSchema,
     title: z.string(),
     article: z.string(),
-    updatedAt: z.string().optional(),
+    updatedAt: ProductUpdatedAtSchema.optional(),
     type: ProductTypeSchema,
     isActive: z.boolean(),
     availability: ProductAvailabilitySchema,
