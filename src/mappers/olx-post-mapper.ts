@@ -15,7 +15,10 @@ export const OlxPostMapper = {
 };
 
 function toDomain(dto: OlxEnrichedAdvert): CreateProductRequest {
-  const priceValue = dto.price.value;
+  const priceValue = Number(dto.price.value);
+  if (!Number.isFinite(priceValue)) {
+    throw new Error(`Invalid OLX price value: ${dto.price.value}`);
+  }
   const currency = dto.price.currency;
 
   const isActive = dto.status === "active";
@@ -30,10 +33,8 @@ function toDomain(dto: OlxEnrichedAdvert): CreateProductRequest {
     region: dto.enrichedLocation.region || null,
     district: dto.enrichedLocation.district || null,
     address: dto.enrichedLocation.address || null,
-    latitude:
-      dto.location?.latitude != null ? String(dto.location.latitude) : null,
-    longitude:
-      dto.location?.longitude != null ? String(dto.location.longitude) : null,
+    latitude: dto.location?.latitude ?? null,
+    longitude: dto.location?.longitude ?? null,
   });
 
   const cleanLink = (dto.url || dto.externalUrl || "").replace(

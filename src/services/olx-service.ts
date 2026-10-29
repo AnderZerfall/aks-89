@@ -26,7 +26,7 @@ import type { OlxRegionDto } from "../types/dto/olx/olx-location.dto.js";
 import {
   OlxCitySchema,
   OlxDistrictSchema,
-  OlxLocationResponseSchema,
+  OlxLocationLookupResponseSchema,
   OlxRegionSchema,
   OlxRegionResponseSchema,
 } from "../types/dto/olx/olx-location.dto.js";
@@ -294,7 +294,7 @@ export const OlxService = {
       {
         method: OLX_ROUTES.getLocations.method,
         requestSchema: NoRequestSchema,
-        responseSchema: OlxLocationResponseSchema,
+        responseSchema: OlxLocationLookupResponseSchema,
         headers: {
           ["Version"]: "2.0",
         },
@@ -304,11 +304,15 @@ export const OlxService = {
     Logger.info("location retrived successfully!", response);
     return response;
   },
-  getLocationByCords: async (accessToken: string, lat: number, lon: number) => {
+  getLocationByCords: async (
+    accessToken: string,
+    latitude: string,
+    longitude: string,
+  ) => {
     const locData = await OlxService.getLocations({
       accessToken,
-      latitude: lat.toString(),
-      longitude: lon.toString(),
+      latitude,
+      longitude,
     });
 
     const location = locData.data[0];

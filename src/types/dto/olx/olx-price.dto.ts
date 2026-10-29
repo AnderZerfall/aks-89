@@ -10,4 +10,9 @@ export const OlxPriceSchema = z
   })
   .loose();
 
+export const OlxPriceResponseSchema = OlxPriceSchema.extend({
+  value: z.string(),
+});
+
 export type OlxPriceDto = z.infer<typeof OlxPriceSchema>;
+export type OlxPriceResponseDto = z.infer<typeof OlxPriceResponseSchema>;

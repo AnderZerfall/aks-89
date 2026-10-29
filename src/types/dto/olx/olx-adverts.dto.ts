@@ -5,8 +5,14 @@ import {
 } from "../../constants/olx.js";
 import { OlxAdvertAttributeSchema } from "./olx-advert-attribute.js";
 import { OlxContactSchema } from "./olx-contact.dto.js";
-import { OlxLocationSchema } from "./olx-location.dto.js";
-import { OlxPriceSchema } from "./olx-price.dto.js";
+import {
+  OlxLocationResponseSchema,
+  OlxLocationSchema,
+} from "./olx-location.dto.js";
+import {
+  OlxPriceResponseSchema,
+  OlxPriceSchema,
+} from "./olx-price.dto.js";
 
 export const OlxPhotoSchema = z.object({ url: z.string() }).loose();
 
@@ -22,12 +28,12 @@ export const OlxAdvertSchema = z
     description: z.string(),
     categoryId: z.number(),
     advertiserType: OlxAdvertiserSchema.optional(),
-    externalId: z.string().optional(),
-    externalUrl: z.string().optional(),
+    externalId: z.string().nullable().optional(),
+    externalUrl: z.string().nullable().optional(),
     contact: OlxContactSchema.optional(),
-    location: OlxLocationSchema.optional(),
+    location: OlxLocationResponseSchema.optional(),
     attributes: z.array(OlxAdvertAttributeSchema).optional(),
-    price: OlxPriceSchema,
+    price: OlxPriceResponseSchema,
     images: z.array(OlxPhotoSchema).optional(),
   })
   .loose();
@@ -56,8 +62,8 @@ export const CreateOlxAdvertRequestSchema = z
     images: z.array(OlxPhotoSchema).optional(),
     attributes: z.array(OlxAdvertAttributeSchema).optional(),
     contact: OlxContactSchema.optional(),
-    externalId: z.string().optional(),
-    externalUrl: z.string().optional(),
+    externalId: z.string().nullable().optional(),
+    externalUrl: z.string().nullable().optional(),
   })
   .loose();
 
@@ -72,11 +78,11 @@ export const CreateOlxAdvertResponseDataSchema = z
     createdAt: z.string(),
     activatedAt: z.string().optional(),
     validTo: z.string().optional(),
-    location: OlxLocationSchema,
-    price: OlxPriceSchema,
+    location: OlxLocationResponseSchema,
+    price: OlxPriceResponseSchema,
     photos: z.array(OlxPhotoSchema),
     attributes: z.array(OlxAdvertAttributeSchema).optional(),
-    externalId: z.string().optional(),
+    externalId: z.string().nullable().optional(),
   })
   .loose();
 

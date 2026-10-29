@@ -3,9 +3,18 @@ import { z } from "zod";
 export const OlxLocationSchema = z
   .object({
     cityId: z.number().optional(),
-    districtId: z.number().optional(),
+    districtId: z.number().nullable().optional(),
     latitude: z.number().optional(),
     longitude: z.number().optional(),
+  })
+  .loose();
+
+export const OlxLocationResponseSchema = z
+  .object({
+    cityId: z.number().optional(),
+    districtId: z.number().nullable().optional(),
+    latitude: z.string().optional(),
+    longitude: z.string().optional(),
   })
   .loose();
 
@@ -43,7 +52,7 @@ export const OlxDistrictSchema = z
   })
   .loose();
 
-export const OlxLocationResponseSchema = z.object({
+export const OlxLocationLookupResponseSchema = z.object({
   data: z.array(
     z.object({
       city: OlxCitySchema,
@@ -53,8 +62,13 @@ export const OlxLocationResponseSchema = z.object({
 });
 
 export type OlxLocationDto = z.infer<typeof OlxLocationSchema>;
+export type OlxLocationResponseDto = z.infer<
+  typeof OlxLocationResponseSchema
+>;
 export type OlxRegionDto = z.infer<typeof OlxRegionSchema>;
 export type OlxRegionResponseDto = z.infer<typeof OlxRegionResponseSchema>;
 export type OlxCityResponseDto = z.infer<typeof OlxCitySchema>;
 export type OlxDistrictResponseDto = z.infer<typeof OlxDistrictSchema>;
-export type OlxLocationResponseDto = z.infer<typeof OlxLocationResponseSchema>;
+export type OlxLocationLookupResponseDto = z.infer<
+  typeof OlxLocationLookupResponseSchema
+>;
