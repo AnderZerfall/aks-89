@@ -63,7 +63,6 @@ export const ProductSchema = z
       .nullable()
       .transform((quantity) => quantity ?? 0),
     description: z.string(),
-    comment: z.string().optional(),
     link: z
       .string()
       .nullable()

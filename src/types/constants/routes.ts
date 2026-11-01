@@ -49,6 +49,15 @@ export const OLX_ROUTES = {
     method: "GET",
     url: "https://www.olx.ua/api/partner/categories",
   },
+  getUserBusiness: {
+    method: "GET",
+    url: "https://www.olx.ua/api/partner/users-business/me",
+  },
+  getCategoryAttributes: {
+    method: "GET",
+    url: (categoryId: string) =>
+      `https://www.olx.ua/api/partner/categories/${categoryId}/attributes`,
+  },
   getRegion: {
     method: "GET",
     url: (regionId: string) =>

@@ -11,7 +11,7 @@ import type {
   OlxAdvert,
 } from "../../src/types/dto/olx/olx-adverts.dto.js";
 import { createHandler } from "../../src/utils/create-handler.js";
-import { CommentBuilder } from "../../src/utils/location-util.js";
+import { LocationUtil } from "../../src/utils/location-util.js";
 import { Logger } from "../../src/utils/logger.js";
 
 type SyncCounts = {
@@ -242,8 +242,8 @@ async function createOlxPost(
   accessToken: string,
   product: Product,
 ): Promise<OlxAdvert | null> {
-  const contact = getOlxContact();
-  const location = await getOlxLocationFromComment(accessToken, product);
+  const contact = await getOlxContact(accessToken);
+  const location = await getOlxLocationFromProduct(accessToken, product);
   if (!location) return null;
 
   const images = await createWatermarkedImageUrls(product);
@@ -262,15 +262,10 @@ async function updateOlxPost(
   product: Product,
   matchingPost: OlxAdvert,
 ): Promise<OlxAdvert | null> {
-  if (!matchingPost.contact) {
-    Logger.warn("Skipping OLX update because advert has no contact details", {
-      advertId: matchingPost.id,
-      article: product.article,
-    });
-    return null;
-  }
+  const contact =
+    matchingPost.contact ?? (await getOlxContact(accessToken));
 
-  const location = await getOlxLocationFromComment(
+  const location = await getOlxLocationFromProduct(
     accessToken,
     product,
     matchingPost.location,
@@ -282,7 +277,7 @@ async function updateOlxPost(
     product,
     images,
     location,
-    matchingPost.contact,
+    contact,
     matchingPost.categoryId,
     matchingPost.attributes,
   );
@@ -298,13 +293,22 @@ async function updateOlxPost(
   });
 }
 
-function getOlxContact(): NonNullable<CreateOlxAdvertRequestDto["contact"]> {
-  const name = process.env.OLX_CONTACT_NAME?.trim();
+async function getOlxContact(
+  accessToken: string,
+): Promise<NonNullable<CreateOlxAdvertRequestDto["contact"]>> {
+  const business = await OlxService.getUserBusiness({ accessToken });
+  const name = business.name?.trim() || process.env.OLX_CONTACT_NAME?.trim();
   if (!name) {
-    throw new Error("Missing required environment variable OLX_CONTACT_NAME");
+    throw new Error(
+      "Missing contact name from OLX business profile and environment",
+    );
   }
 
-  const phone = process.env.OLX_CONTACT_PHONE?.trim();
+  const phone =
+    business.phones?.[0]?.trim() ||
+    business.phone?.trim() ||
+    process.env.OLX_CONTACT_PHONE?.trim();
+
   return {
     name,
     ...(phone ? { phone } : {}),
@@ -327,13 +331,13 @@ async function createWatermarkedImageUrls(product: Product): Promise<string[]> {
   );
 }
 
-async function getOlxLocationFromComment(
+async function getOlxLocationFromProduct(
   accessToken: string,
   product: Product,
   existingLocation?: OlxAdvert["location"],
 ): Promise<CreateOlxAdvertRequestDto["location"] | null> {
-  const parsedLocation = CommentBuilder.parseLocationFromComment(
-    product.comment,
+  const parsedLocation = LocationUtil.parseLocationFromDescription(
+    product.description,
   );
   const latitudeValue = parsedLocation?.latitude;
   const longitudeValue = parsedLocation?.longitude;
@@ -367,12 +371,15 @@ async function getOlxLocationFromComment(
       };
     }
 
-    Logger.warn("Skipping product with no valid coordinates in its comment", {
-      productId: product.id,
-      article: product.article,
-      latitude: latitudeValue ?? null,
-      longitude: longitudeValue ?? null,
-    });
+    Logger.warn(
+      "Skipping product with no valid coordinates in its description",
+      {
+        productId: product.id,
+        article: product.article,
+        latitude: latitudeValue ?? null,
+        longitude: longitudeValue ?? null,
+      },
+    );
     return null;
   }
 

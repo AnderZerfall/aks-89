@@ -1,6 +1,10 @@
 import { Placeholder } from "../types/constants/product.js";
 import { OLX_ROUTES } from "../types/constants/routes.js";
-import { OlxAdvertCategorySchema } from "../types/dto/olx/olx-advert-attribute.js";
+import {
+  OlxAdvertCategorySchema,
+  OlxCategoryAttributesResponseSchema,
+} from "../types/dto/olx/olx-advert-attribute.js";
+import type { OlxCategoryAttribute } from "../types/dto/olx/olx-advert-attribute.js";
 import type {
   CreateOlxAdvertRequestDto,
   OlxStatusActionRequestDto,
@@ -31,6 +35,11 @@ import {
   OlxRegionResponseSchema,
 } from "../types/dto/olx/olx-location.dto.js";
 import {
+  OlxUserBusinessResponseSchema,
+  OlxUserBusinessSchema,
+  type OlxUserBusiness,
+} from "../types/dto/olx/olx-user-business.dto.js";
+import {
   createRequest,
   createRequestWithAuth,
   EmptyObjectSchema,
@@ -38,6 +47,9 @@ import {
   UnknownObjectSchema,
 } from "../utils/create-request.js";
 import { Logger } from "../utils/logger.js";
+
+const categoryAttributesCache = new Map<number, OlxCategoryAttribute[]>();
+let userBusinessCache: OlxUserBusiness | null = null;
 
 export const OlxService = {
   refreshTokens: async () => {
@@ -61,6 +73,7 @@ export const OlxService = {
       );
     }
 
+    userBusinessCache = null;
     Logger.info("Access token successfully retrieved!");
     return accessToken;
   },
@@ -212,6 +225,70 @@ export const OlxService = {
 
     Logger.info("Category retrived successfully!", response);
     return response;
+  },
+  getUserBusiness: async ({
+    accessToken,
+  }: {
+    accessToken: string;
+  }): Promise<OlxUserBusiness> => {
+    if (userBusinessCache) return userBusinessCache;
+
+    const response = await createRequestWithAuth(
+      OLX_ROUTES.getUserBusiness.url,
+      accessToken,
+      {
+        method: OLX_ROUTES.getUserBusiness.method,
+        requestSchema: NoRequestSchema,
+        responseSchema: OlxUserBusinessResponseSchema,
+        headers: {
+          ["Version"]: "2.0",
+        },
+      },
+    );
+
+    const business = OlxUserBusinessSchema.parse(
+      "data" in response ? response.data : response,
+    );
+    userBusinessCache = business;
+    Logger.info("User business retrieved successfully!", business);
+    return business;
+  },
+  getCategoryAttributes: async ({
+    accessToken,
+    categoryId,
+  }: {
+    accessToken: string;
+    categoryId: number;
+  }): Promise<OlxCategoryAttribute[]> => {
+    const cached = categoryAttributesCache.get(categoryId);
+    if (cached) return cached;
+
+    try {
+      const response = await createRequestWithAuth(
+        OLX_ROUTES.getCategoryAttributes.url(categoryId.toString()),
+        accessToken,
+        {
+          method: OLX_ROUTES.getCategoryAttributes.method,
+          requestSchema: NoRequestSchema,
+          responseSchema: OlxCategoryAttributesResponseSchema,
+          headers: {
+            ["Version"]: "2.0",
+          },
+        },
+      );
+      categoryAttributesCache.set(categoryId, response.data);
+      Logger.info("Loaded OLX category attributes", {
+        categoryId,
+        count: response.data.length,
+      });
+      return response.data;
+    } catch (error) {
+      Logger.error("Failed to load OLX category attributes", {
+        categoryId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
   },
   getRegion: async ({
     accessToken,

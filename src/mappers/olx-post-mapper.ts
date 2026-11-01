@@ -6,7 +6,6 @@ import {
 import { type CreateProductRequest } from "../types/domain/product.js";
 import type { OlxEnrichedAdvert } from "../types/dto/olx/olx-adverts.dto.js";
 import { DescriptionBuilder } from "../utils/description-util.js";
-import { CommentBuilder } from "../utils/location-util.js";
 import { Price } from "../utils/price.js";
 import { ProductCategoryMapper } from "./product-category-mapper.js";
 
@@ -28,15 +27,6 @@ function toDomain(dto: OlxEnrichedAdvert): CreateProductRequest {
 
   const imageUrls = dto.images ? dto.images.map((img) => img.url) : [];
 
-  const comment = CommentBuilder.buildLocationComment({
-    city: dto.enrichedLocation.city || null,
-    region: dto.enrichedLocation.region || null,
-    district: dto.enrichedLocation.district || null,
-    address: dto.enrichedLocation.address || null,
-    latitude: dto.location?.latitude ?? null,
-    longitude: dto.location?.longitude ?? null,
-  });
-
   const cleanLink = (dto.url || dto.externalUrl || "").replace(
     /^https?:\/\//i,
     "",
@@ -53,7 +43,6 @@ function toDomain(dto: OlxEnrichedAdvert): CreateProductRequest {
     quantity: 1,
     reservedQuantity: 0,
     description: DescriptionBuilder.build(dto.description, imageUrls),
-    comment: comment,
     link: cleanLink,
     prices: [
       {

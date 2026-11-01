@@ -14,6 +14,16 @@ export const LocationCommentKeySchema = z.enum([
   "Широта",
   "Довгота",
 ]);
+export const CrmSyncLocationKeySchema = z.enum([
+  "Місто",
+  "Регіон",
+  "Район",
+  "Вулиця",
+  "Будинок",
+  "Координати",
+  "Широта",
+  "Довгота",
+]);
 export const PlaceholderSchema = z.literal("інформації не знайдено");
 
 export const ProductCategory = {
@@ -47,6 +57,16 @@ export const LocationCommentKey = {
   latitude: LocationCommentKeySchema.enum["Широта"],
   longitude: LocationCommentKeySchema.enum["Довгота"],
 } as const;
+export const CrmSyncLocationKey = {
+  city: CrmSyncLocationKeySchema.enum["Місто"],
+  region: CrmSyncLocationKeySchema.enum["Регіон"],
+  district: CrmSyncLocationKeySchema.enum["Район"],
+  street: CrmSyncLocationKeySchema.enum["Вулиця"],
+  building: CrmSyncLocationKeySchema.enum["Будинок"],
+  coordinates: CrmSyncLocationKeySchema.enum["Координати"],
+  latitude: CrmSyncLocationKeySchema.enum["Широта"],
+  longitude: CrmSyncLocationKeySchema.enum["Довгота"],
+} as const;
 export const Placeholder = {
   NotFound: PlaceholderSchema.value,
 } as const;
@@ -56,4 +76,5 @@ export type ProductType = z.infer<typeof ProductTypeSchema>;
 export type ProductCategory = z.infer<typeof ProductCategorySchema>;
 export type ProductMeasurement = z.infer<typeof ProductMeasurementSchema>;
 export type LocationCommentKey = z.infer<typeof LocationCommentKeySchema>;
+export type CrmSyncLocationKey = z.infer<typeof CrmSyncLocationKeySchema>;
 export type Placeholder = z.infer<typeof PlaceholderSchema>;
