@@ -11,7 +11,7 @@ import type {
   OlxAdvert,
 } from "../../src/types/dto/olx/olx-adverts.dto.js";
 import { createHandler } from "../../src/utils/create-handler.js";
-import { LocationUtil } from "../../src/utils/location-util.js";
+import { CrmSyncUtil } from "../../src/utils/crm-sync-util.js";
 import { Logger } from "../../src/utils/logger.js";
 
 type SyncCounts = {
@@ -247,12 +247,20 @@ async function createOlxPost(
   if (!location) return null;
 
   const images = await createWatermarkedImageUrls(product);
+  const categoryId = ProductCategoryMapper.toOlx(product.productCategoryId);
+  const categoryAttributes = await OlxService.getCategoryAttributes({
+    accessToken,
+    categoryId,
+  });
   const payload = UspacyProductToOlxMapper.toCreateRequest(
     product,
     images,
     location,
     contact,
+    undefined,
+    categoryAttributes,
   );
+  if (!payload) return null;
 
   return OlxService.createPost({ accessToken, payload });
 }
@@ -262,25 +270,25 @@ async function updateOlxPost(
   product: Product,
   matchingPost: OlxAdvert,
 ): Promise<OlxAdvert | null> {
-  const contact =
-    matchingPost.contact ?? (await getOlxContact(accessToken));
+  const contact = matchingPost.contact ?? (await getOlxContact(accessToken));
 
-  const location = await getOlxLocationFromProduct(
-    accessToken,
-    product,
-    matchingPost.location,
-  );
+  const location = await getOlxLocationFromProduct(accessToken, product);
   if (!location) return null;
 
   const images = await createWatermarkedImageUrls(product);
+  const categoryAttributes = await OlxService.getCategoryAttributes({
+    accessToken,
+    categoryId: matchingPost.categoryId,
+  });
   const mappedPayload = UspacyProductToOlxMapper.toCreateRequest(
     product,
     images,
     location,
     contact,
     matchingPost.categoryId,
-    matchingPost.attributes,
+    categoryAttributes,
   );
+  if (!mappedPayload) return null;
   const payload = {
     ...mappedPayload,
     attributes: mappedPayload.attributes ?? [],
@@ -316,7 +324,12 @@ async function getOlxContact(
 }
 
 async function createWatermarkedImageUrls(product: Product): Promise<string[]> {
-  const sourceUrls = product.files ?? [];
+  const sourceUrls = product.foto?.length
+    ? await UspacyService.getProductFileUrls({
+        productId: product.id,
+        fileIds: product.foto,
+      })
+    : (product.files ?? []).filter(Boolean);
   const publicIdPrefix = (product.article || product.id)
     .replace(/[^a-zA-Z0-9_-]/g, "-")
     .slice(0, 100);
@@ -334,17 +347,25 @@ async function createWatermarkedImageUrls(product: Product): Promise<string[]> {
 async function getOlxLocationFromProduct(
   accessToken: string,
   product: Product,
-  existingLocation?: OlxAdvert["location"],
 ): Promise<CreateOlxAdvertRequestDto["location"] | null> {
-  const parsedLocation = LocationUtil.parseLocationFromDescription(
-    product.description,
-  );
-  const latitudeValue = parsedLocation?.latitude;
-  const longitudeValue = parsedLocation?.longitude;
-  const latitude =
-    latitudeValue == null ? Number.NaN : Number(latitudeValue);
-  const longitude =
-    longitudeValue == null ? Number.NaN : Number(longitudeValue);
+  const { metadata } = CrmSyncUtil.parseDescription(product.description);
+  const parsedLocation = CrmSyncUtil.getLocation(metadata);
+  if (
+    !parsedLocation?.city ||
+    !parsedLocation.region ||
+    !parsedLocation.latitude ||
+    !parsedLocation.longitude
+  ) {
+    console.error(
+      `Skipping product ${product.id}: CRM_SYNC must include city, region, and valid coordinates`,
+    );
+    return null;
+  }
+
+  const latitudeValue = parsedLocation.latitude;
+  const longitudeValue = parsedLocation.longitude;
+  const latitude = Number(latitudeValue);
+  const longitude = Number(longitudeValue);
 
   if (
     !Number.isFinite(latitude) ||
@@ -354,31 +375,8 @@ async function getOlxLocationFromProduct(
     longitude < -180 ||
     longitude > 180
   ) {
-    if (existingLocation?.cityId != null) {
-      return {
-        cityId: existingLocation.cityId,
-        ...(existingLocation.districtId != null
-          ? { districtId: existingLocation.districtId }
-          : {}),
-        ...(existingLocation.latitude != null &&
-        Number.isFinite(Number(existingLocation.latitude))
-          ? { latitude: Number(existingLocation.latitude) }
-          : {}),
-        ...(existingLocation.longitude != null &&
-        Number.isFinite(Number(existingLocation.longitude))
-          ? { longitude: Number(existingLocation.longitude) }
-          : {}),
-      };
-    }
-
-    Logger.warn(
-      "Skipping product with no valid coordinates in its description",
-      {
-        productId: product.id,
-        article: product.article,
-        latitude: latitudeValue ?? null,
-        longitude: longitudeValue ?? null,
-      },
+    console.error(
+      `Skipping product ${product.id}: CRM_SYNC contains invalid coordinates`,
     );
     return null;
   }

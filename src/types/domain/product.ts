@@ -19,30 +19,32 @@ const ProductIdSchema = z
 const ProductUpdatedAtSchema = z
   .union([
     z.string(),
-    z.number().finite().refine((timestamp) => {
-      const milliseconds =
-        Math.abs(timestamp) < 1_000_000_000_000
-          ? timestamp * 1000
-          : timestamp;
-      return Math.abs(milliseconds) <= 8_640_000_000_000_000;
-    }),
+    z
+      .number()
+      .finite()
+      .refine((timestamp) => {
+        const milliseconds =
+          Math.abs(timestamp) < 1_000_000_000_000
+            ? timestamp * 1000
+            : timestamp;
+        return Math.abs(milliseconds) <= 8_640_000_000_000_000;
+      }),
   ])
   .transform((updatedAt) => {
     if (typeof updatedAt === "string") return updatedAt;
 
     const milliseconds =
-      Math.abs(updatedAt) < 1_000_000_000_000
-        ? updatedAt * 1000
-        : updatedAt;
+      Math.abs(updatedAt) < 1_000_000_000_000 ? updatedAt * 1000 : updatedAt;
     return new Date(milliseconds).toISOString();
   });
 
 const ProductFileSchema = z
-  .union([
-    z.string(),
-    z.object({ url: z.string() }).loose(),
-  ])
+  .union([z.string(), z.object({ url: z.string() }).loose()])
   .transform((file) => (typeof file === "string" ? file : file.url));
+
+const ProductFileIdSchema = z
+  .union([z.string().trim().min(1), z.number().int().positive()])
+  .transform(String);
 
 export const ProductSchema = z
   .object({
@@ -53,11 +55,14 @@ export const ProductSchema = z
     article: z.string(),
     updatedAt: ProductUpdatedAtSchema.optional(),
     type: ProductTypeSchema,
-    isActive: z.union([z.boolean(), z.literal(0), z.literal(1)]).transform(
-      (isActive) => isActive === true || isActive === 1,
-    ),
+    isActive: z
+      .union([z.boolean(), z.literal(0), z.literal(1)])
+      .transform((isActive) => isActive === true || isActive === 1),
     availability: ProductAvailabilitySchema,
-    quantity: z.number().nullable().transform((quantity) => quantity ?? 0),
+    quantity: z
+      .number()
+      .nullable()
+      .transform((quantity) => quantity ?? 0),
     reservedQuantity: z
       .number()
       .nullable()
@@ -70,10 +75,22 @@ export const ProductSchema = z
       .transform((link) => link ?? undefined),
     prices: z.array(PriceSchema),
     files: z.array(ProductFileSchema).optional(),
+    foto: z.preprocess(
+      (fileIds) =>
+        fileIds == null
+          ? undefined
+          : Array.isArray(fileIds)
+            ? fileIds
+            : [fileIds],
+      z.array(ProductFileIdSchema).optional(),
+    ),
   })
   .loose();
 
-export const CreateProductRequestSchema = ProductSchema.omit({ id: true });
+export const CreateProductRequestSchema = ProductSchema.omit({
+  id: true,
+  isActive: true,
+});
 export const UpdateProductRequestSchema = ProductSchema;
 export const CreateProductsBulkRequestSchema = z.object({
   products: z.array(CreateProductRequestSchema),
@@ -89,12 +106,8 @@ export const ListProductParamsSchema = z.object({
 export type Price = z.infer<typeof PriceSchema>;
 export type Product = z.infer<typeof ProductSchema>;
 export type ListProductParams = z.infer<typeof ListProductParamsSchema>;
-export type CreateProductRequest = z.infer<
-  typeof CreateProductRequestSchema
->;
-export type UpdateProductRequest = z.infer<
-  typeof UpdateProductRequestSchema
->;
+export type CreateProductRequest = z.infer<typeof CreateProductRequestSchema>;
+export type UpdateProductRequest = z.infer<typeof UpdateProductRequestSchema>;
 export type CreateProductsBulkRequest = z.infer<
   typeof CreateProductsBulkRequestSchema
 >;
