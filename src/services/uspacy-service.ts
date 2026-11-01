@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { USPACY_ROUTES } from "../types/constants/routes.js";
 import type {
   CreateEntityRequest,
@@ -23,12 +24,64 @@ import {
 } from "../types/domain/product.js";
 import {
   createRequest,
+  createRequestWithAuth,
   EmptyObjectSchema,
   NoRequestSchema,
 } from "../utils/create-request.js";
 import { Logger } from "../utils/logger.js";
 
+const UspacyAccessTokenSchema = z.object({
+  access_token: z.string().min(1),
+  expires_in: z.number().positive().optional(),
+});
+const UspacyFilesResponseSchema = z.object({
+  data: z.array(
+    z
+      .object({
+        id: z.union([z.number(), z.string()]),
+        url: z.string().url(),
+      })
+      .loose(),
+  ),
+});
+
+let cachedAccessToken: { token: string; expiresAt: number } | undefined;
+
 export const UspacyService = {
+  getProductFileUrls: async ({
+    productId,
+    fileIds,
+  }: {
+    productId: string;
+    fileIds: string[];
+  }): Promise<string[]> => {
+    const entityId = Number(productId);
+    if (!Number.isSafeInteger(entityId) || entityId <= 0) {
+      throw new Error(
+        `Cannot resolve Uspacy files for product ${productId}: product ID must be a positive integer`,
+      );
+    }
+
+    const accessToken = await getUspacyAccessToken();
+    const { data } = await createRequestWithAuth(
+      USPACY_ROUTES.getFiles.url("product", entityId),
+      accessToken,
+      {
+        method: USPACY_ROUTES.getFiles.method,
+        requestSchema: NoRequestSchema,
+        responseSchema: UspacyFilesResponseSchema,
+      },
+    );
+    const urlsById = new Map(data.map((file) => [String(file.id), file.url]));
+    const missingIds = fileIds.filter((fileId) => !urlsById.has(fileId));
+    if (missingIds.length) {
+      throw new Error(
+        `Uspacy files response for product ${productId} did not include foto file IDs: ${missingIds.join(", ")}`,
+      );
+    }
+
+    return fileIds.map((fileId) => urlsById.get(fileId)!);
+  },
   getProduct: async (productId: string) => {
     const response = await createRequest(
       USPACY_ROUTES.getProduct.url(productId),
@@ -56,15 +109,12 @@ export const UspacyService = {
     return response;
   },
   createProduct: async ({ payload }: { payload: CreateProductRequest }) => {
-    const response = await createRequest(
-      USPACY_ROUTES.createProduct.url,
-      {
-        method: USPACY_ROUTES.createProduct.method,
-        requestSchema: CreateProductRequestSchema,
-        responseSchema: ProductSchema,
-        body: payload,
-      },
-    );
+    const response = await createRequest(USPACY_ROUTES.createProduct.url, {
+      method: USPACY_ROUTES.createProduct.method,
+      requestSchema: CreateProductRequestSchema,
+      responseSchema: ProductSchema,
+      body: payload,
+    });
 
     Logger.info("Product was successfully created!", response);
     return response;
@@ -74,15 +124,12 @@ export const UspacyService = {
   }: {
     payload: CreateProductsBulkRequest;
   }) => {
-    const response = await createRequest(
-      USPACY_ROUTES.bulkCreateProducts.url,
-      {
-        method: USPACY_ROUTES.bulkCreateProducts.method,
-        requestSchema: CreateProductsBulkRequestSchema,
-        responseSchema: EmptyObjectSchema,
-        body: payload,
-      },
-    );
+    const response = await createRequest(USPACY_ROUTES.bulkCreateProducts.url, {
+      method: USPACY_ROUTES.bulkCreateProducts.method,
+      requestSchema: CreateProductsBulkRequestSchema,
+      responseSchema: EmptyObjectSchema,
+      body: payload,
+    });
 
     Logger.info("Products (bulk) were successfully created!", response);
     return response;
@@ -121,15 +168,12 @@ export const UspacyService = {
     return response;
   },
   createEntity: async ({ payload }: { payload: CreateEntityRequest }) => {
-    const response = await createRequest(
-      USPACY_ROUTES.createEntity.url,
-      {
-        method: USPACY_ROUTES.createEntity.method,
-        requestSchema: CreateEntityRequestSchema,
-        responseSchema: EntitySchema,
-        body: payload,
-      },
-    );
+    const response = await createRequest(USPACY_ROUTES.createEntity.url, {
+      method: USPACY_ROUTES.createEntity.method,
+      requestSchema: CreateEntityRequestSchema,
+      responseSchema: EntitySchema,
+      body: payload,
+    });
 
     Logger.info("Entity was successfully created!", response);
     return response;
@@ -201,3 +245,45 @@ export const UspacyService = {
     return allProducts;
   },
 };
+
+async function getUspacyAccessToken(): Promise<string> {
+  if (cachedAccessToken && cachedAccessToken.expiresAt > Date.now()) {
+    return cachedAccessToken.token;
+  }
+
+  const clientId = process.env.USPACY_CLIENT_ID?.trim();
+  const clientSecret = process.env.USPACY_CLIENT_SECRET?.trim();
+  if (!clientId || !clientSecret) {
+    throw new Error(
+      "Missing USPACY_CLIENT_ID or USPACY_CLIENT_SECRET for Uspacy file lookup",
+    );
+  }
+
+  const params = new URLSearchParams({
+    grant_type: "client_credentials",
+    client_id: clientId,
+    client_secret: clientSecret,
+  });
+  const response = await fetch("https://auth.uspacy.ua/oauth/token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: params,
+  });
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(
+      `Uspacy access token request failed [${response.status}]: ${errorBody}`,
+    );
+  }
+
+  const tokenData = UspacyAccessTokenSchema.parse(await response.json());
+  if (tokenData.expires_in) {
+    cachedAccessToken = {
+      token: tokenData.access_token,
+      expiresAt: Date.now() + Math.max(tokenData.expires_in - 60, 0) * 1000,
+    };
+  }
+  return tokenData.access_token;
+}

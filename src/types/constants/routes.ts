@@ -81,8 +81,19 @@ export const OLX_ROUTES = {
 
 const USPACY_INCOMMING_WEBHOOK =
   "https://aksestate.uspacy.ua/company/v1/incoming_webhooks/run/aKmzP2NLdzSQsZ9hAt1K696I9nTPAQeG";
+const USPACY_API_BASE_URL = new URL(USPACY_INCOMMING_WEBHOOK).origin;
 
 export const USPACY_ROUTES = {
+  getFiles: {
+    method: "GET",
+    url: (entityType: string, entityId: number) => {
+      const query = new URLSearchParams({
+        entityType,
+        entityId: String(entityId),
+      });
+      return `${USPACY_API_BASE_URL}/files/v1/files?${query}`;
+    },
+  },
   createEntity: {
     method: "POST",
     url: `${USPACY_INCOMMING_WEBHOOK}/crm/v1/entity`,

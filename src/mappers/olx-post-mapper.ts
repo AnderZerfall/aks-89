@@ -25,8 +25,6 @@ function toDomain(dto: OlxEnrichedAdvert): CreateProductRequest {
     ? ProductAvailability.Available
     : ProductAvailability.NotAvailable;
 
-  const imageUrls = dto.images ? dto.images.map((img) => img.url) : [];
-
   const cleanLink = (dto.url || dto.externalUrl || "").replace(
     /^https?:\/\//i,
     "",
@@ -38,11 +36,10 @@ function toDomain(dto: OlxEnrichedAdvert): CreateProductRequest {
     title: dto.title,
     article: dto.externalId || dto.id.toString(),
     type: ProductType.Goods,
-    isActive: isActive,
     availability: availability,
     quantity: 1,
     reservedQuantity: 0,
-    description: DescriptionBuilder.build(dto.description, imageUrls),
+    description: DescriptionBuilder.build(dto.description),
     link: cleanLink,
     prices: [
       {

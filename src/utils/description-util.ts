@@ -15,23 +15,8 @@ const ALLOWED_TAGS = new Set([
 ]);
 
 export const DescriptionBuilder = {
-  build: (
-    description: string | null | undefined,
-    imageUrls: readonly string[],
-  ): string => {
-    const formattedDescription = formatDescription(description);
-    const images = imageUrls
-      .filter(Boolean)
-      .map(
-        (url, index) =>
-          `<li><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Image ${index + 1}</a></li>`,
-      );
-    const imageSection = images.length
-      ? `<hr><p>images</p><ul>${images.join("")}</ul>`
-      : "";
-
-    return [formattedDescription, imageSection].filter(Boolean).join("\n");
-  },
+  build: (description: string | null | undefined): string =>
+    formatDescription(description),
 };
 
 function formatDescription(description: string | null | undefined): string {
