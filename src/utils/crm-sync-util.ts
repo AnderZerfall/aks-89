@@ -9,13 +9,30 @@ import type { LocationData } from "./location-util.js";
 const ATTRIBUTES_OPEN_TAG = "[Атрибути]";
 const ATTRIBUTES_CLOSE_TAG = "[/Атрибути]";
 const CRM_SYNC_MARKER =
-  /(?:^|[\r\n]|<br\s*\/?>|<\/(?:p|div)\s*>)[\t ]*(?:<p(?:\s[^>]*)?>[\t ]*)?(?:\[Атрибути\]|---[\t ]*CRM_SYNC[\t ]*:)[\t ]*/im;
+  /(?:\[Атрибути\]|(?:^|[\r\n]|<br\s*\/?>|<\/(?:p|div)\s*>)[\t ]*(?:<p(?:\s[^>]*)?>[\t ]*)?---[\t ]*CRM_SYNC[\t ]*:)[\t ]*/im;
 const HTML_LINE_BREAKS = /<br\s*\/?>|<\/(?:p|div|li|tr|h\d)>/gi;
 const HTML_TAGS = /<[^>]*>/g;
+const HTML_TAG_PATTERN = /<\/?([a-z][\w:-]*)\b[^>]*>/gi;
+const VOID_HTML_TAGS = new Set([
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "param",
+  "source",
+  "track",
+  "wbr",
+]);
 const KEY_NORMALIZATION_PATTERN = /[\s-]+/g;
 const HIDDEN_CHARACTERS = /[\u200B-\u200D\uFEFF]/g;
-const METADATA_BULLET_PATTERN = /^[ \t]*•[ \t]*/gm;
-const METADATA_SECTION_PATTERN = /^[ \t]*(?:ЛОКАЦІЯ|ХАРАКТЕРИСТИКИ)[ \t]*$/gim;
+const METADATA_BULLET_PATTERN = /•[ \t]*/g;
+const METADATA_SECTION_PATTERN = /ЛОКАЦІЯ|ХАРАКТЕРИСТИКИ/g;
 const COORDINATE_PATTERNS = [
   /^([+-]?\d+(?:[.,]\d+)?)\s*;\s*([+-]?\d+(?:[.,]\d+)?)$/,
   /^([+-]?\d+(?:[.,]\d+)?),\s+([+-]?\d+(?:[.,]\d+)?)$/,
@@ -351,6 +368,24 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function closeOpenHtmlTags(html: string): string {
+  const openTags: string[] = [];
+
+  for (const match of html.matchAll(HTML_TAG_PATTERN)) {
+    const tag = match[1]!.toLowerCase();
+    if (VOID_HTML_TAGS.has(tag) || match[0].endsWith("/>")) continue;
+
+    if (match[0].startsWith("</")) {
+      const openTagIndex = openTags.lastIndexOf(tag);
+      if (openTagIndex !== -1) openTags.splice(openTagIndex);
+    } else {
+      openTags.push(tag);
+    }
+  }
+
+  return html + openTags.reverse().map((tag) => `</${tag}>`).join("");
+}
+
 function getMetadataValue(
   metadata: ReadonlyMap<string, string>,
   ...keys: string[]
@@ -440,10 +475,9 @@ export const CrmSyncUtil = {
     const markerStart =
       marker.index +
       marker[0].search(new RegExp(`${escapeRegExp(ATTRIBUTES_OPEN_TAG)}|---`));
-    const publicDescription = description
-      .slice(0, markerStart)
-      .replace(/<p(?:\s[^>]*)?>[\t ]*$/i, "")
-      .trim();
+    const publicDescription = closeOpenHtmlTags(
+      description.slice(0, markerStart).replace(/<p(?:\s[^>]*)?>[\t ]*$/i, ""),
+    ).trim();
     const closingTagIndex = description.indexOf(
       ATTRIBUTES_CLOSE_TAG,
       metadataStart,
