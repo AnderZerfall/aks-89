@@ -314,6 +314,12 @@ async function getOlxContact(
 }
 
 async function createWatermarkedImageUrls(product: Product): Promise<string[]> {
+  Logger.info("Checking Uspacy product foto field", {
+    productId: product.id,
+    hasFoto: Boolean(product.foto?.length),
+    fotoCount: product.foto?.length ?? 0,
+  });
+
   const sourceUrls = product.foto?.length
     ? await UspacyService.getProductFileUrls({
         productId: product.id,
