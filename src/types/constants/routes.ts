@@ -84,6 +84,10 @@ const USPACY_INCOMMING_WEBHOOK =
 const USPACY_API_BASE_URL = new URL(USPACY_INCOMMING_WEBHOOK).origin;
 
 export const USPACY_ROUTES = {
+  signIn: {
+    method: "POST",
+    url: `${USPACY_API_BASE_URL}/auth/v1/auth/sign_in`,
+  },
   getFiles: {
     method: "GET",
     url: (entityType: string, entityId: number) => {

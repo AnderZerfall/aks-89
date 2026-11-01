@@ -30,9 +30,9 @@ import {
 } from "../utils/create-request.js";
 import { Logger } from "../utils/logger.js";
 
-const UspacyAccessTokenSchema = z.object({
-  access_token: z.string().min(1),
-  expires_in: z.number().positive().optional(),
+const UspacySignInResponseSchema = z.object({
+  jwt: z.string().min(1),
+  expireInSeconds: z.number().positive().optional(),
 });
 const UspacyFilesResponseSchema = z.object({
   data: z.array(
@@ -254,39 +254,37 @@ async function getUspacyAccessToken(): Promise<string> {
     return cachedAccessToken.token;
   }
 
-  const clientId = process.env.USPACY_CLIENT_ID?.trim();
-  const clientSecret = process.env.USPACY_CLIENT_SECRET?.trim();
-  if (!clientId || !clientSecret) {
+  const email = process.env.USPACY_USER_EMAIL?.trim();
+  const password = process.env.USPACY_USER_PASSWORD;
+  if (!email || !password) {
     throw new Error(
-      "Missing USPACY_CLIENT_ID or USPACY_CLIENT_SECRET for Uspacy file lookup",
+      "Missing USPACY_USER_EMAIL or USPACY_USER_PASSWORD for Uspacy file lookup",
     );
   }
 
-  const params = new URLSearchParams({
-    grant_type: "client_credentials",
-    client_id: clientId,
-    client_secret: clientSecret,
-  });
-  const response = await fetch("https://aksestate.uspacy.ua/oauth/v2/token", {
-    method: "POST",
+  const response = await fetch(USPACY_ROUTES.signIn.url, {
+    method: USPACY_ROUTES.signIn.method,
     headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
+      "Content-Type": "application/json",
     },
-    body: params,
+    body: JSON.stringify({ email, password }),
   });
   if (!response.ok) {
     const errorBody = await response.text();
     throw new Error(
-      `Uspacy access token request failed [${response.status}]: ${errorBody}`,
+      `Uspacy sign-in request failed [${response.status}]: ${errorBody}`,
     );
   }
 
-  const tokenData = UspacyAccessTokenSchema.parse(await response.json());
-  if (tokenData.expires_in) {
+  const signInResponse = UspacySignInResponseSchema.parse(
+    await response.json(),
+  );
+  if (signInResponse.expireInSeconds) {
     cachedAccessToken = {
-      token: tokenData.access_token,
-      expiresAt: Date.now() + Math.max(tokenData.expires_in - 60, 0) * 1000,
+      token: signInResponse.jwt,
+      expiresAt:
+        Date.now() + Math.max(signInResponse.expireInSeconds - 60, 0) * 1000,
     };
   }
-  return tokenData.access_token;
+  return signInResponse.jwt;
 }
