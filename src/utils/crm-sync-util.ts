@@ -3,13 +3,13 @@ import {
   LocationCommentKey,
   Placeholder,
 } from "../types/constants/product.js";
+import type { OlxAdvertAttribute } from "../types/dto/olx/olx-advert-attribute.js";
 import type { LocationData } from "./location-util.js";
 
 const CRM_SYNC_MARKER =
   /(?:^|[\r\n]|<br\s*\/?>|<\/(?:p|div)\s*>)[\t ]*(?:<p(?:\s[^>]*)?>[\t ]*)?---[\t ]*CRM_SYNC[\t ]*:[\t ]*/im;
 const HTML_LINE_BREAKS = /<br\s*\/?>|<\/(?:p|div|li|tr|h\d)>/gi;
 const HTML_TAGS = /<[^>]*>/g;
-const METADATA_LINE_SEPARATOR = /[\r\n|]+/;
 const KEY_NORMALIZATION_PATTERN = /[\s-]+/g;
 const HIDDEN_CHARACTERS = /[\u200B-\u200D\uFEFF]/g;
 const COORDINATE_PATTERNS = [
@@ -32,6 +32,75 @@ const GENERIC_LOCATION_KEYS = {
   longitude: "longitude",
 } as const;
 const ADDRESS_SEPARATOR = ", ";
+const ATTRIBUTE_LABELS = {
+  from_developer: "Від забудовника",
+  commission: "Комісія",
+  is_exchange: "Обмін",
+  cooperate: "Співпраця",
+  eoselia: "єОселя",
+  city_distance: "Відстань до міста",
+  total_floors: "Кількість поверхів",
+  total_area: "Загальна площа",
+  number_of_rooms: "Кількість кімнат",
+  land_area: "Площа ділянки",
+  property_type_houses: "Тип нерухомості (будинки)",
+  house_type: "Тип будинку",
+  external_wall_insulation: "Утеплення зовнішніх стін",
+  roof_type: "Тип даху",
+  bathroom_3: "Санвузол",
+  heating: "Опалення",
+  repair: "Ремонт",
+  furnish: "Меблювання",
+  appliances: "Побутова техніка",
+  multimedia_2: "Мультимедіа",
+  comfort_4: "Комфорт будинку",
+  communications: "Комунікації",
+  infrastructure_500_m: "Інфраструктура (до 500 м)",
+  ecosystem_1_km: "Екосистема (до 1 км)",
+  property_type_land: "Тип нерухомості (земля)",
+  plot_buildings: "Будівлі на ділянці",
+  apartments_object_type: "Тип об'єкта квартири",
+  property_type_appartments_sale: "Тип квартири",
+  zkh: "Житловий комплекс",
+  floor: "Поверх",
+  kitchen_area: "Площа кухні",
+  apartments_dev_type: "Клас житла",
+  number_of_rooms_string: "Кількість кімнат (тип)",
+  layout: "Планування",
+  bathroom: "Санвузол (квартира)",
+  comfort: "Комфорт квартири",
+} as const;
+const ATTRIBUTE_CODES_BY_LABEL = new Map(
+  Object.entries(ATTRIBUTE_LABELS).map(([code, label]) => [
+    normalizeKey(label),
+    code,
+  ]),
+);
+const MULTI_VALUE_ATTRIBUTE_CODES = new Set([
+  "appliances",
+  "communications",
+  "comfort",
+  "comfort_4",
+  "ecosystem_1_km",
+  "infrastructure_500_m",
+  "multimedia_2",
+  "plot_buildings",
+]);
+const LOCATION_METADATA_KEYS = new Set(
+  [
+    CrmSyncLocationKey.city,
+    CrmSyncLocationKey.region,
+    CrmSyncLocationKey.district,
+    CrmSyncLocationKey.coordinates,
+    CrmSyncLocationKey.latitude,
+    CrmSyncLocationKey.longitude,
+    CrmSyncLocationKey.street,
+    CrmSyncLocationKey.building,
+    "address",
+    "Адреса",
+    ...Object.values(GENERIC_LOCATION_KEYS),
+  ].map(normalizeKey),
+);
 
 type CrmSyncDescription = {
   publicDescription: string;
@@ -95,17 +164,41 @@ function parseCoordinatePair(
 function parseMetadata(text: string): Map<string, string> {
   const plainText = text.replace(HTML_LINE_BREAKS, "\n").replace(HTML_TAGS, "");
   const metadata = new Map<string, string>();
+  const knownKeys = [
+    ...Object.keys(ATTRIBUTE_LABELS),
+    ...Object.values(ATTRIBUTE_LABELS),
+    ...Object.values(GENERIC_LOCATION_KEYS),
+    CrmSyncLocationKey.city,
+    CrmSyncLocationKey.region,
+    CrmSyncLocationKey.district,
+    CrmSyncLocationKey.coordinates,
+    CrmSyncLocationKey.latitude,
+    CrmSyncLocationKey.longitude,
+    CrmSyncLocationKey.street,
+    CrmSyncLocationKey.building,
+    "Адреса",
+    "address",
+  ].sort((left, right) => right.length - left.length);
+  const keyPattern = new RegExp(
+    `(?:^|\\s)(${knownKeys.map(escapeRegExp).join("|")}|[a-z][a-z0-9_-]*)\\s*:\\s*`,
+    "giu",
+  );
+  const matches = [...plainText.matchAll(keyPattern)];
 
-  for (const line of plainText.split(METADATA_LINE_SEPARATOR)) {
-    const separatorIndex = line.indexOf(":");
-    if (separatorIndex < 0) continue;
-
-    const key = normalizeKey(line.slice(0, separatorIndex));
-    const value = line.slice(separatorIndex + 1).trim();
-    if (key && value) metadata.set(key, value);
+  for (const [index, match] of matches.entries()) {
+    const key = normalizeKey(match[1]!);
+    const valueStart = match.index! + match[0].length;
+    const nextMatch = matches[index + 1];
+    const valueEnd = nextMatch?.index ?? plainText.length;
+    const value = plainText.slice(valueStart, valueEnd).trim();
+    if (value) metadata.set(key, value);
   }
 
   return metadata;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function getMetadataValue(
@@ -208,4 +301,39 @@ export const CrmSyncUtil = {
 
   getLocation,
   normalizeAttributeKey: normalizeKey,
+  getAttributeLabel(code: string): string {
+    return ATTRIBUTE_LABELS[normalizeKey(code) as keyof typeof ATTRIBUTE_LABELS] ??
+      code;
+  },
+  getAttributeCode(label: string): string | null {
+    const normalizedLabel = normalizeKey(label);
+    return ATTRIBUTE_CODES_BY_LABEL.get(normalizedLabel) ??
+      (Object.hasOwn(ATTRIBUTE_LABELS, normalizedLabel)
+        ? normalizedLabel
+        : null);
+  },
+  getOlxAttributes(
+    metadata: ReadonlyMap<string, string>,
+  ): OlxAdvertAttribute[] {
+    const attributes: OlxAdvertAttribute[] = [];
+    for (const [key, value] of metadata) {
+      if (LOCATION_METADATA_KEYS.has(key)) continue;
+
+      const code = ATTRIBUTE_CODES_BY_LABEL.get(key) ?? key;
+      if (MULTI_VALUE_ATTRIBUTE_CODES.has(code)) {
+        attributes.push({
+          code,
+          values: value
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean),
+        });
+        continue;
+      }
+
+      attributes.push({ code, value });
+    }
+
+    return attributes;
+  },
 };

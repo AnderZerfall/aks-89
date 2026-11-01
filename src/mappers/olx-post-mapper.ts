@@ -1,6 +1,7 @@
 import {
   CrmSyncLocationKey,
   LocationCommentKey,
+  Placeholder,
   ProductAvailability,
   ProductMeasurement,
   ProductType,
@@ -9,6 +10,7 @@ import { type CreateProductRequest } from "../types/domain/product.js";
 import type { OlxAdvertAttribute } from "../types/dto/olx/olx-advert-attribute.js";
 import type { OlxEnrichedAdvert } from "../types/dto/olx/olx-adverts.dto.js";
 import { DescriptionBuilder } from "../utils/description-util.js";
+import { CrmSyncUtil } from "../utils/crm-sync-util.js";
 import { Price } from "../utils/price.js";
 import { ProductCategoryMapper } from "./product-category-mapper.js";
 
@@ -72,23 +74,18 @@ function buildCrmSyncBlock(dto: OlxEnrichedAdvert): string {
       dto.enrichedLocation.district,
     ),
     formatMetadataLine(CrmSyncLocationKey.coordinates, getCoordinates(dto)),
+    formatMetadataLine(
+      LocationCommentKey.address,
+      dto.enrichedLocation.address || Placeholder.NotFound,
+    ),
   ];
-
-  if (dto.enrichedLocation.address) {
-    metadata.push(
-      formatMetadataLine(
-        LocationCommentKey.address,
-        dto.enrichedLocation.address,
-      ),
-    );
-  }
 
   for (const attribute of dto.attributes ?? []) {
     const values = getAttributeValues(attribute);
     if (values.length) {
       metadata.push(
         formatMetadataLine(
-          attribute.code,
+          CrmSyncUtil.getAttributeLabel(attribute.code),
           values.join(ATTRIBUTE_VALUE_SEPARATOR),
         ),
       );

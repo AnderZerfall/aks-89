@@ -248,18 +248,12 @@ async function createOlxPost(
   if (!location) return null;
 
   const images = await createWatermarkedImageUrls(product);
-  const categoryId = ProductCategoryMapper.toOlx(product.productCategoryId);
-  const categoryAttributes = await OlxService.getCategoryAttributes({
-    accessToken,
-    categoryId,
-  });
   const payload = UspacyProductToOlxMapper.toCreateRequest(
     product,
     images,
     location,
     contact,
     undefined,
-    categoryAttributes,
   );
   if (!payload) return null;
 
@@ -277,17 +271,12 @@ async function updateOlxPost(
   if (!location) return null;
 
   const images = await createWatermarkedImageUrls(product);
-  const categoryAttributes = await OlxService.getCategoryAttributes({
-    accessToken,
-    categoryId: matchingPost.categoryId,
-  });
   const mappedPayload = UspacyProductToOlxMapper.toCreateRequest(
     product,
     images,
     location,
     contact,
     matchingPost.categoryId,
-    categoryAttributes,
   );
   if (!mappedPayload) return null;
   const payload = {
