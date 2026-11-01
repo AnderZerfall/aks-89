@@ -3,9 +3,9 @@ import { z } from "zod";
 export const OlxUserBusinessSchema = z
   .object({
     id: z.union([z.number(), z.string()]).optional(),
-    name: z.string().trim().min(1),
+    name: z.string().trim().min(1).nullable().optional(),
     description: z.string().optional(),
-    subdomain: z.string().optional(),
+    subdomain: z.string().nullable().optional(),
     websiteUrl: z.string().optional(),
     phones: z.array(z.string()).optional(),
     phone: z.string().optional(),
@@ -24,4 +24,3 @@ export type OlxUserBusiness = z.infer<typeof OlxUserBusinessSchema>;
 export type OlxUserBusinessResponse = z.infer<
   typeof OlxUserBusinessResponseSchema
 >;
-
