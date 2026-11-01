@@ -75,7 +75,7 @@ export const CreateOlxAdvertResponseDataSchema = z
     validTo: z.string().optional(),
     location: OlxLocationResponseSchema,
     price: OlxPriceResponseSchema,
-    photos: z.array(OlxPhotoSchema),
+    photos: z.array(OlxPhotoSchema).optional(),
     attributes: z.array(OlxAdvertAttributeSchema).optional(),
     externalId: z.string().nullable().optional(),
   })
