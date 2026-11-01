@@ -14,6 +14,8 @@ const HTML_LINE_BREAKS = /<br\s*\/?>|<\/(?:p|div|li|tr|h\d)>/gi;
 const HTML_TAGS = /<[^>]*>/g;
 const KEY_NORMALIZATION_PATTERN = /[\s-]+/g;
 const HIDDEN_CHARACTERS = /[\u200B-\u200D\uFEFF]/g;
+const METADATA_BULLET_PATTERN = /^[ \t]*•[ \t]*/gm;
+const METADATA_SECTION_PATTERN = /^[ \t]*(?:ЛОКАЦІЯ|ХАРАКТЕРИСТИКИ)[ \t]*$/gim;
 const COORDINATE_PATTERNS = [
   /^([+-]?\d+(?:[.,]\d+)?)\s*;\s*([+-]?\d+(?:[.,]\d+)?)$/,
   /^([+-]?\d+(?:[.,]\d+)?),\s+([+-]?\d+(?:[.,]\d+)?)$/,
@@ -76,6 +78,148 @@ const ATTRIBUTE_CODES_BY_LABEL = new Map(
   Object.entries(ATTRIBUTE_LABELS).map(([code, label]) => [
     normalizeKey(label),
     code,
+  ]),
+);
+const ATTRIBUTE_VALUE_LABELS: Record<string, Record<string, string>> = {
+  apartments_object_type: {
+    primary_market: "Первинний ринок",
+    secondary_market: "Вторинний ринок",
+  },
+  apartments_dev_type: {
+    business: "Бізнес-клас",
+    economy: "Економ-клас",
+  },
+  number_of_rooms_string: {
+    odnokomnatnye: "Однокімнатна",
+    dvuhkomnatnye: "Двокімнатна",
+    trehkomnatnye: "Трикімнатна",
+    chetyrehkomnatnye: "Чотирикімнатна",
+    pyatikomnatnye: "П'ятикімнатна",
+  },
+  layout: {
+    adjacent_through: "Суміжно-прохідне",
+    separate: "Роздільне",
+  },
+  heating: {
+    centralized: "Централізоване",
+    combined: "Комбіноване",
+    individual_electro: "Індивідуальне електричне",
+  },
+  furnish: {
+    yes: "З меблями",
+    no: "Без меблів",
+  },
+  appliances: {
+    fridge: "Холодильник",
+    hob: "Варильна поверхня",
+    oven: "Духова шафа",
+    stove: "Плита",
+    washer: "Пральна машина",
+  },
+  multimedia_2: {
+    speed_internet: "Швидкісний інтернет",
+    tv: "Телебачення",
+    wifi: "Wi-Fi",
+  },
+  comfort: {
+    cctv: "Відеоспостереження",
+    air_conditioning: "Кондиціонер",
+    concierge: "Консьєрж",
+    elevator: "Ліфт",
+    fire_alarm: "Пожежна сигналізація",
+    ground_parking: "Наземний паркінг",
+    guest_parking: "Гостьовий паркінг",
+    kitchen_furniture: "Меблі на кухні",
+    panoramic_windows: "Панорамні вікна",
+    protected_area: "Територія під охороною",
+    service_lift: "Вантажний ліфт",
+    wardrobe: "Гардеробна",
+    shower: "Душ",
+    signaling: "Сигналізація",
+  },
+  comfort_4: {
+    air_conditioning: "Кондиціонер",
+    fence: "Огорожа",
+    shower_cabin: "Душова кабіна",
+    fireplace: "Камін",
+    garden: "Сад",
+    huest_house: "Гостьовий будинок",
+    guest_house: "Гостьовий дім",
+    sauna: "Сауна",
+  },
+  plot_buildings: {
+    fence: "Огорожа",
+  },
+  communications: {
+    asphalt_road: "Асфальтована дорога",
+    central_sewerage_system: "Централізована каналізація",
+    electricity: "Електрика",
+    garbage_removal: "Вивіз сміття",
+    gas: "Газ",
+    sewerage_septic_tank: "Септик",
+    water_central: "Централізоване водопостачання",
+    well: "Свердловина",
+  },
+  infrastructure_500_m: {
+    bank_atm: "Банк / банкомат",
+    cinema_theater: "Кінотеатр",
+    city_center: "Центр міста",
+    farmacy: "Аптека",
+    market: "Ринок",
+    metro: "Метро",
+    railway_station: "Залізнична станція",
+    restaurant_cafe: "Ресторан / кафе",
+    shop_kiosk: "Магазин / кіоск",
+    supermarket_mall: "Супермаркет / торговий центр",
+    transport_stop: "Зупинка транспорту",
+    school: "Школа",
+  },
+  ecosystem_1_km: {
+    forest: "Ліс",
+    reservoir: "Водойма",
+    river: "Річка",
+  },
+  property_type_houses: {
+    house: "Будинок",
+    country_house: "Дачний будинок",
+  },
+  external_wall_insulation: {
+    mineral_wool: "Мінеральна вата",
+  },
+  roof_type: {
+    metal_tile: "Металочерепиця",
+    metal_slate: "Металевий шифер",
+  },
+  from_developer: {
+    "0": "Ні",
+    "1": "Так",
+  },
+  commission: {
+    "0": "Ні",
+    "1": "Так",
+  },
+  is_exchange: {
+    "0": "Ні",
+    "1": "Так",
+  },
+  cooperate: {
+    "0": "Ні",
+    "1": "Так",
+  },
+  eoselia: {
+    "0": "Ні",
+    "1": "Так",
+  },
+};
+const ATTRIBUTE_VALUE_CODES = new Map(
+  Object.entries(ATTRIBUTE_VALUE_LABELS).map(([code, values]) => [
+    code,
+    new Map(
+      Object.entries(values).map(([value, label]) => [
+        normalizeKey(label),
+        value,
+      ]),
+    ),
   ]),
 );
 const MULTI_VALUE_ATTRIBUTE_CODES = new Set([
@@ -164,7 +308,11 @@ function parseCoordinatePair(
 }
 
 function parseMetadata(text: string): Map<string, string> {
-  const plainText = text.replace(HTML_LINE_BREAKS, "\n").replace(HTML_TAGS, "");
+  const plainText = text
+    .replace(HTML_LINE_BREAKS, "\n")
+    .replace(HTML_TAGS, "")
+    .replace(METADATA_BULLET_PATTERN, "")
+    .replace(METADATA_SECTION_PATTERN, "");
   const metadata = new Map<string, string>();
   const knownKeys = [
     ...Object.keys(ATTRIBUTE_LABELS),
@@ -322,6 +470,12 @@ export const CrmSyncUtil = {
         ? normalizedLabel
         : null);
   },
+  translateAttributeValue(code: string, value: string): string {
+    return (
+      ATTRIBUTE_VALUE_LABELS[normalizeKey(code)]?.[normalizeKey(value)] ??
+      value
+    );
+  },
   getOlxAttributes(
     metadata: ReadonlyMap<string, string>,
   ): OlxAdvertAttribute[] {
@@ -330,18 +484,21 @@ export const CrmSyncUtil = {
       if (LOCATION_METADATA_KEYS.has(key)) continue;
 
       const code = ATTRIBUTE_CODES_BY_LABEL.get(key) ?? key;
+      const getOlxValue = (item: string): string =>
+        ATTRIBUTE_VALUE_CODES.get(code)?.get(normalizeKey(item)) ?? item;
       if (MULTI_VALUE_ATTRIBUTE_CODES.has(code)) {
         attributes.push({
           code,
           values: value
             .split(",")
             .map((item) => item.trim())
-            .filter(Boolean),
+            .filter(Boolean)
+            .map(getOlxValue),
         });
         continue;
       }
 
-      attributes.push({ code, value });
+      attributes.push({ code, value: getOlxValue(value) });
     }
 
     return attributes;

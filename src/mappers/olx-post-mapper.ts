@@ -18,6 +18,8 @@ const ATTRIBUTES_OPEN_TAG = "[Атрибути]";
 const ATTRIBUTES_CLOSE_TAG = "[/Атрибути]";
 const METADATA_LINE_SEPARATOR = "\n";
 const ATTRIBUTE_VALUE_SEPARATOR = ", ";
+const LOCATION_SECTION_TITLE = "ЛОКАЦІЯ";
+const ATTRIBUTES_SECTION_TITLE = "ХАРАКТЕРИСТИКИ";
 
 export const OlxPostMapper = {
   toDomain,
@@ -68,6 +70,7 @@ function toDomain(dto: OlxEnrichedAdvert): CreateProductRequest {
 
 function buildCrmSyncBlock(dto: OlxEnrichedAdvert): string {
   const metadata = [
+    LOCATION_SECTION_TITLE,
     formatMetadataLine(CrmSyncLocationKey.city, dto.enrichedLocation.city),
     formatMetadataLine(CrmSyncLocationKey.region, dto.enrichedLocation.region),
     formatMetadataLine(
@@ -79,6 +82,8 @@ function buildCrmSyncBlock(dto: OlxEnrichedAdvert): string {
       LocationCommentKey.address,
       dto.enrichedLocation.address || Placeholder.NotFound,
     ),
+    "",
+    ATTRIBUTES_SECTION_TITLE,
   ];
 
   for (const attribute of dto.attributes ?? []) {
@@ -87,7 +92,11 @@ function buildCrmSyncBlock(dto: OlxEnrichedAdvert): string {
       metadata.push(
         formatMetadataLine(
           CrmSyncUtil.getAttributeLabel(attribute.code),
-          values.join(ATTRIBUTE_VALUE_SEPARATOR),
+          values
+            .map((value) =>
+              CrmSyncUtil.translateAttributeValue(attribute.code, value),
+            )
+            .join(ATTRIBUTE_VALUE_SEPARATOR),
         ),
       );
     }
@@ -102,7 +111,7 @@ function buildCrmSyncBlock(dto: OlxEnrichedAdvert): string {
 
 function formatMetadataLine(key: string, value: string): string {
   const safeValue = value.replace(/[\r\n|]+/g, " ").trim();
-  return `${key}: ${safeValue}`;
+  return `• ${key}: ${safeValue}`;
 }
 
 function getCoordinates(dto: OlxEnrichedAdvert): string {
