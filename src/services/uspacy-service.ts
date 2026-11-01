@@ -72,11 +72,19 @@ export const UspacyService = {
         responseSchema: UspacyFilesResponseSchema,
       },
     );
+    Logger.info("Uspacy files returned for product", {
+      productId,
+      requestedFileIds: fileIds,
+      files: data.map(({ id, ...file }) => ({
+        id: String(id),
+        fields: Object.keys(file),
+      })),
+    });
     const urlsById = new Map(data.map((file) => [String(file.id), file.url]));
     const missingIds = fileIds.filter((fileId) => !urlsById.has(fileId));
     if (missingIds.length) {
       throw new Error(
-        `Uspacy files response for product ${productId} did not include foto file IDs: ${missingIds.join(", ")}`,
+        `Uspacy files response for product ${productId} did not include foto file IDs: ${missingIds.join(", ")}. Returned IDs: ${[...urlsById.keys()].join(", ") || "none"}`,
       );
     }
 
