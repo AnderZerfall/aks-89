@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { LocationCommentKey, Placeholder } from "../types/constants/product.js";
+import {
+  CrmSyncLocationKey,
+  LocationCommentKey,
+  Placeholder,
+} from "../types/constants/product.js";
 
 export const LocationDataSchema = z.object({
   city: z.string().nullable(),
@@ -20,7 +24,55 @@ function normalizeLocationLabel(value: string): string {
     .toLocaleLowerCase("uk");
 }
 
-export const CommentBuilder = {
+function extractCoordinates(
+  value: string,
+): { latitude: string; longitude: string } | null {
+  const trimmed = value.trim();
+  if (trimmed.includes(";")) {
+    const [lat, lon] = trimmed.split(";");
+    if (lat && lon) {
+      const latClean = lat.trim().replace(",", ".");
+      const lonClean = lon.trim().replace(",", ".");
+      if (!Number.isNaN(Number(latClean)) && !Number.isNaN(Number(lonClean))) {
+        return { latitude: latClean, longitude: lonClean };
+      }
+    }
+  }
+
+  const commaSpaceMatch = trimmed.match(
+    /^([+-]?\d+(?:[.,]\d+)?),\s+([+-]?\d+(?:[.,]\d+)?)$/,
+  );
+  if (commaSpaceMatch) {
+    const lat = commaSpaceMatch[1]!.replace(",", ".");
+    const lon = commaSpaceMatch[2]!.replace(",", ".");
+    if (!Number.isNaN(Number(lat)) && !Number.isNaN(Number(lon))) {
+      return { latitude: lat, longitude: lon };
+    }
+  }
+
+  const commaMatch = trimmed.match(/^([+-]?\d+\.\d+),([+-]?\d+\.\d+)$/);
+  if (commaMatch) {
+    return {
+      latitude: commaMatch[1]!,
+      longitude: commaMatch[2]!,
+    };
+  }
+
+  const spaceMatch = trimmed.match(
+    /^([+-]?\d+(?:[.,]\d+)?)\s+([+-]?\d+(?:[.,]\d+)?)$/,
+  );
+  if (spaceMatch) {
+    const lat = spaceMatch[1]!.replace(",", ".");
+    const lon = spaceMatch[2]!.replace(",", ".");
+    if (!Number.isNaN(Number(lat)) && !Number.isNaN(Number(lon))) {
+      return { latitude: lat, longitude: lon };
+    }
+  }
+
+  return null;
+}
+
+export const LocationUtil = {
   buildLocationComment: (loc: LocationData): string => {
     return [
       `${LocationCommentKey.city}: ${loc.city || Placeholder.NotFound}`,
@@ -30,12 +82,19 @@ export const CommentBuilder = {
       `${LocationCommentKey.longitude}: ${loc.longitude ?? Placeholder.NotFound}`,
     ].join(" | ");
   },
-  parseLocationFromComment: (comment?: string): LocationData | null => {
-    if (!comment) return null;
+
+  parseLocationFromDescription: (
+    description?: string,
+  ): LocationData | null => {
+    if (!description) return null;
 
     const values = new Map<string, string>();
-    const plainComment = comment.replace(/<[^>]*>/g, "");
-    for (const part of plainComment.split("|")) {
+    const plainText = description
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(p|div|li|tr|h\d)>/gi, "\n")
+      .replace(/<[^>]*>/g, "");
+
+    for (const part of plainText.split(/[\r\n|]+/)) {
       const separatorIndex = part.indexOf(":");
       if (separatorIndex === -1) continue;
 
@@ -44,22 +103,112 @@ export const CommentBuilder = {
       if (key && value) values.set(key, value);
     }
 
-    const extract = (key: LocationCommentKey) => {
-      const val = values.get(normalizeLocationLabel(key));
-      if (val === Placeholder.NotFound) return null;
-
-      return val || null;
+    const extract = (labels: string[]): string | null => {
+      for (const label of labels) {
+        const val = values.get(normalizeLocationLabel(label));
+        if (val && val !== Placeholder.NotFound) return val;
+      }
+      return null;
     };
+
+    let latitude: string | null = null;
+    let longitude: string | null = null;
+
+    const coordsVal = extract([
+      CrmSyncLocationKey.coordinates,
+      "coordinates",
+    ]);
+    if (coordsVal) {
+      const parsed = extractCoordinates(coordsVal);
+      if (parsed) {
+        latitude = parsed.latitude;
+        longitude = parsed.longitude;
+      }
+    }
+
+    if (!latitude || !longitude) {
+      const latVal = extract([
+        CrmSyncLocationKey.latitude,
+        LocationCommentKey.latitude,
+        "latitude",
+      ]);
+      const lonVal = extract([
+        CrmSyncLocationKey.longitude,
+        LocationCommentKey.longitude,
+        "longitude",
+      ]);
+      if (latVal && lonVal) {
+        const latClean = latVal.replace(",", ".");
+        const lonClean = lonVal.replace(",", ".");
+        if (
+          !Number.isNaN(Number(latClean)) &&
+          !Number.isNaN(Number(lonClean))
+        ) {
+          latitude = latClean;
+          longitude = lonClean;
+        }
+      }
+    }
+
+    if (!latitude || !longitude) {
+      const coordsMatch =
+        /(?:координати|coordinates)[\s:]+([+-]?\d+(?:[.,]\d+)?)[,\s;]+([+-]?\d+(?:[.,]\d+)?)/i.exec(
+          plainText,
+        );
+      if (coordsMatch) {
+        const latClean = coordsMatch[1]!.replace(",", ".");
+        const lonClean = coordsMatch[2]!.replace(",", ".");
+        if (
+          !Number.isNaN(Number(latClean)) &&
+          !Number.isNaN(Number(lonClean))
+        ) {
+          latitude = latClean;
+          longitude = lonClean;
+        }
+      }
+    }
+
+    const city = extract([
+      CrmSyncLocationKey.city,
+      LocationCommentKey.city,
+      "city",
+    ]);
+    const region = extract([
+      CrmSyncLocationKey.region,
+      LocationCommentKey.region,
+      "region",
+    ]);
+    const district = extract([
+      CrmSyncLocationKey.district,
+      LocationCommentKey.district,
+      "district",
+    ]);
+
+    const street = extract([CrmSyncLocationKey.street, "street"]);
+    const building = extract([CrmSyncLocationKey.building, "building"]);
+    let address = extract([LocationCommentKey.address, "address"]);
+    if (!address && street) {
+      address = building ? `${street}, ${building}` : street;
+    }
+
+    if (!city && !region && !district && !address && !latitude && !longitude) {
+      return null;
+    }
 
     return {
-      city: extract(LocationCommentKey.city),
-      region: extract(LocationCommentKey.region),
-      district: extract(LocationCommentKey.district),
-      address: extract(LocationCommentKey.address),
-      latitude: extract(LocationCommentKey.latitude),
-      longitude: extract(LocationCommentKey.longitude),
+      city,
+      region,
+      district,
+      address,
+      latitude,
+      longitude,
     };
   },
+
+  parseLocationFromComment: (comment?: string): LocationData | null => {
+    return LocationUtil.parseLocationFromDescription(comment);
+  },
+
   createLocationSignature: (loc: {
     city?: string | null;
     address?: string | null;
@@ -69,7 +218,6 @@ export const CommentBuilder = {
     const city = (loc.city || "").trim().toLowerCase();
     const address = (loc.address || "").trim().toLowerCase();
 
-    // Format coordinates to 4 decimal places to handle minor floating-point variations safely
     const latNum =
       loc.latitude !== undefined &&
       loc.latitude !== null &&
@@ -93,3 +241,5 @@ export const CommentBuilder = {
     return `${city}|${address}|${lat}|${lon}`;
   },
 };
+
+export const CommentBuilder = LocationUtil;
