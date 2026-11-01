@@ -83,12 +83,16 @@ export const UspacyService = {
     const urlsById = new Map(data.map((file) => [String(file.id), file.url]));
     const missingIds = fileIds.filter((fileId) => !urlsById.has(fileId));
     if (missingIds.length) {
-      throw new Error(
-        `Uspacy files response for product ${productId} did not include foto file IDs: ${missingIds.join(", ")}. Returned IDs: ${[...urlsById.keys()].join(", ") || "none"}`,
-      );
+      Logger.warn("Skipping foto file IDs missing from Uspacy files response", {
+        productId,
+        missingFileIds: missingIds,
+      });
     }
 
-    return fileIds.map((fileId) => urlsById.get(fileId)!);
+    return fileIds.flatMap((fileId) => {
+      const url = urlsById.get(fileId);
+      return url ? [url] : [];
+    });
   },
   getProduct: async (productId: string) => {
     const response = await createRequest(
