@@ -57,7 +57,9 @@ export const ProductSchema = z
     type: ProductTypeSchema,
     isActive: z
       .union([z.boolean(), z.literal(0), z.literal(1)])
-      .transform((isActive) => isActive === true || isActive === 1),
+      .transform((isActive) => isActive === true || isActive === 1)
+      .nullable()
+      .optional(),
     availability: ProductAvailabilitySchema,
     quantity: z
       .number()

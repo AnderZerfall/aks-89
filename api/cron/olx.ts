@@ -5,6 +5,7 @@ import { CloudinaryImageService } from "../../src/services/cloudinary-image-serv
 import { OlxService } from "../../src/services/olx-service.js";
 import { OlxSyncStateService } from "../../src/services/olx-sync-state-service.js";
 import { UspacyService } from "../../src/services/uspacy-service.js";
+import { ProductAvailability } from "../../src/types/constants/product.js";
 import type { Product } from "../../src/types/domain/product.js";
 import type {
   CreateOlxAdvertRequestDto,
@@ -408,7 +409,10 @@ async function synchronizePostStatus(
   post: OlxAdvert,
   counts: SyncCounts,
 ): Promise<void> {
-  const shouldBeActive = product.isActive;
+  if (product.availability === ProductAvailability.Pending) return;
+
+  const shouldBeActive =
+    product.availability === ProductAvailability.Available;
   const isActive = post.status === "active";
   if (shouldBeActive === isActive) return;
 
