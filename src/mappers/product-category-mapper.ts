@@ -15,9 +15,9 @@ const OLX_TO_USPACY_CATEGORY_MAP: Record<number, ProductCategory> = {
 };
 
 const USPACY_TO_OLX_CATEGORY_MAP: Record<ProductCategory, number> = {
-  [ProductCategory.FlatSell]: 1757, // Квартири (потрапляє в загальну категорію)
-  [ProductCategory.FlatRent]: 1757, // Оренда квартир (категорія 1757, тип угоди регулюється атрибутом/контентом)
-  [ProductCategory.HouseSell]: 206, // Будинки
+  [ProductCategory.FlatSell]: 1758, // Продаж квартир
+  [ProductCategory.FlatRent]: 1757, // Квартири (категорія, тип угоди регулюється атрибутом/контентом)
+  [ProductCategory.HouseSell]: 1602, // Продаж будинків
   [ProductCategory.HouseRent]: 206, // Оренда будинків (категорія 206, тип угоди регулюється атрибутом/контентом)
   [ProductCategory.CommercialSell]: 1610, // Комерційна нерухомість
   [ProductCategory.CommercialRent]: 1610, // Оренда комерційної нерухомості (категорія 1610)

@@ -14,8 +14,8 @@ export const UspacyProductToOlxMapper = {
     existingCategoryId: number | undefined,
   ): CreateOlxAdvertRequestDto | null => {
     const categoryId =
-      ProductCategoryMapper.toOlx(product.productCategoryId) ??
-      existingCategoryId;
+      existingCategoryId ??
+      ProductCategoryMapper.toOlx(product.productCategoryId);
     if (categoryId === undefined) {
       console.error(
         `Cannot create OLX payload for product ${product.id}: no category mapping for Uspacy category ${product.productCategoryId}`,
