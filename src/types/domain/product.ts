@@ -46,6 +46,20 @@ const ProductFileIdSchema = z
   .union([z.string().trim().min(1), z.number().int().positive()])
   .transform(String);
 
+function normalizeProductFileIds(fileIds: unknown): unknown {
+  if (fileIds == null) return undefined;
+  return Array.isArray(fileIds)
+    ? fileIds.flatMap((fileId) =>
+        Array.isArray(fileId) ? normalizeProductFileIds(fileId) : [fileId],
+      )
+    : [fileIds];
+}
+
+const ProductFileIdsSchema = z.preprocess(
+  normalizeProductFileIds,
+  z.array(ProductFileIdSchema).optional(),
+);
+
 export const ProductSchema = z
   .object({
     id: ProductIdSchema,
@@ -77,15 +91,14 @@ export const ProductSchema = z
       .transform((link) => link ?? undefined),
     prices: z.array(PriceSchema),
     files: z.array(ProductFileSchema).optional(),
-    foto: z.preprocess(
-      (fileIds) =>
-        fileIds == null
-          ? undefined
-          : Array.isArray(fileIds)
-            ? fileIds
-            : [fileIds],
-      z.array(ProductFileIdSchema).optional(),
-    ),
+    foto: ProductFileIdsSchema,
+    additional: z
+      .object({
+        foto: ProductFileIdsSchema,
+      })
+      .loose()
+      .nullable()
+      .optional(),
   })
   .loose();
 

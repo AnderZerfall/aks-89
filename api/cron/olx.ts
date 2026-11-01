@@ -315,21 +315,32 @@ async function getOlxContact(
 
 async function createWatermarkedImageUrls(product: Product): Promise<string[]> {
   const imageProduct =
-    product.foto?.length || product.files?.length
+    product.foto?.length ||
+    product.additional?.foto?.length ||
+    product.files?.length
       ? product
       : await UspacyService.getProduct(product.id);
+  const fotoFileIds =
+    imageProduct.foto?.length
+      ? imageProduct.foto
+      : (imageProduct.additional?.foto ?? []);
 
   Logger.info("Checking Uspacy product foto field", {
     productId: product.id,
     source: imageProduct === product ? "product list" : "product details",
-    hasFoto: Boolean(imageProduct.foto?.length),
-    fotoCount: imageProduct.foto?.length ?? 0,
+    hasFoto: fotoFileIds.length > 0,
+    fotoCount: fotoFileIds.length,
+    fotoFieldPath: imageProduct.foto?.length
+      ? "foto"
+      : imageProduct.additional?.foto?.length
+        ? "additional.foto"
+        : "not found",
   });
 
-  const sourceUrls = imageProduct.foto?.length
+  const sourceUrls = fotoFileIds.length
     ? await UspacyService.getProductFileUrls({
         productId: imageProduct.id,
-        fileIds: imageProduct.foto,
+        fileIds: fotoFileIds,
       })
     : (imageProduct.files ?? []).filter(Boolean);
   const publicIdPrefix = (product.article || product.id)
