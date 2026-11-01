@@ -267,7 +267,7 @@ async function getUspacyAccessToken(): Promise<string> {
     client_id: clientId,
     client_secret: clientSecret,
   });
-  const response = await fetch("https://auth.uspacy.ua/oauth/token", {
+  const response = await fetch("https://aksestate.uspacy.ua/oauth/v2/token", {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
