@@ -14,7 +14,8 @@ import { CrmSyncUtil } from "../utils/crm-sync-util.js";
 import { Price } from "../utils/price.js";
 import { ProductCategoryMapper } from "./product-category-mapper.js";
 
-const CRM_SYNC_HEADER = "--- CRM_SYNC:";
+const ATTRIBUTES_OPEN_TAG = "[Атрибути]";
+const ATTRIBUTES_CLOSE_TAG = "[/Атрибути]";
 const METADATA_LINE_SEPARATOR = "\n";
 const ATTRIBUTE_VALUE_SEPARATOR = ", ";
 
@@ -92,7 +93,11 @@ function buildCrmSyncBlock(dto: OlxEnrichedAdvert): string {
     }
   }
 
-  return [CRM_SYNC_HEADER, ...metadata].join(METADATA_LINE_SEPARATOR);
+  return [
+    ATTRIBUTES_OPEN_TAG,
+    ...metadata,
+    ATTRIBUTES_CLOSE_TAG,
+  ].join(METADATA_LINE_SEPARATOR);
 }
 
 function formatMetadataLine(key: string, value: string): string {

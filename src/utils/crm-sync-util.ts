@@ -6,8 +6,10 @@ import {
 import type { OlxAdvertAttribute } from "../types/dto/olx/olx-advert-attribute.js";
 import type { LocationData } from "./location-util.js";
 
+const ATTRIBUTES_OPEN_TAG = "[Атрибути]";
+const ATTRIBUTES_CLOSE_TAG = "[/Атрибути]";
 const CRM_SYNC_MARKER =
-  /(?:^|[\r\n]|<br\s*\/?>|<\/(?:p|div)\s*>)[\t ]*(?:<p(?:\s[^>]*)?>[\t ]*)?---[\t ]*CRM_SYNC[\t ]*:[\t ]*/im;
+  /(?:^|[\r\n]|<br\s*\/?>|<\/(?:p|div)\s*>)[\t ]*(?:<p(?:\s[^>]*)?>[\t ]*)?(?:\[Атрибути\]|---[\t ]*CRM_SYNC[\t ]*:)[\t ]*/im;
 const HTML_LINE_BREAKS = /<br\s*\/?>|<\/(?:p|div|li|tr|h\d)>/gi;
 const HTML_TAGS = /<[^>]*>/g;
 const KEY_NORMALIZATION_PATTERN = /[\s-]+/g;
@@ -287,15 +289,23 @@ export const CrmSyncUtil = {
     }
 
     const metadataStart = marker.index + marker[0].length;
-    const markerStart = marker.index + marker[0].indexOf("---");
+    const markerStart =
+      marker.index +
+      marker[0].search(new RegExp(`${escapeRegExp(ATTRIBUTES_OPEN_TAG)}|---`));
     const publicDescription = description
       .slice(0, markerStart)
       .replace(/<p(?:\s[^>]*)?>[\t ]*$/i, "")
       .trim();
+    const closingTagIndex = description.indexOf(
+      ATTRIBUTES_CLOSE_TAG,
+      metadataStart,
+    );
+    const metadataEnd =
+      closingTagIndex === -1 ? description.length : closingTagIndex;
 
     return {
       publicDescription,
-      metadata: parseMetadata(description.slice(metadataStart)),
+      metadata: parseMetadata(description.slice(metadataStart, metadataEnd)),
     };
   },
 
