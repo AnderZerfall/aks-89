@@ -92,7 +92,10 @@ export const UspacyService = {
       },
     );
 
-    Logger.info("Posts retrived successfully!", response);
+    Logger.info("Full Uspacy product response", {
+      productId,
+      response,
+    });
     return response;
   },
   listProducts: async (page: number, list: number) => {
