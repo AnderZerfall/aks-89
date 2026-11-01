@@ -64,7 +64,7 @@ export const UspacyService = {
 
     const accessToken = await getUspacyAccessToken();
     const { data } = await createRequestWithAuth(
-      USPACY_ROUTES.getFiles.url("product", entityId),
+      USPACY_ROUTES.getFiles.url("products", entityId),
       accessToken,
       {
         method: USPACY_ROUTES.getFiles.method,
