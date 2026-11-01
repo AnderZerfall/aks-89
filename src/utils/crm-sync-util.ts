@@ -1,5 +1,6 @@
 import {
   CrmSyncLocationKey,
+  LocationCommentKey,
   Placeholder,
 } from "../types/constants/product.js";
 import type { LocationData } from "./location-util.js";
@@ -156,6 +157,12 @@ function getLocation(
     CrmSyncLocationKey.building,
     GENERIC_LOCATION_KEYS.building,
   );
+  const address =
+    getMetadataValue(metadata, LocationCommentKey.address, "address") ??
+    ([street, building]
+      .filter((part): part is string => Boolean(part))
+      .join(ADDRESS_SEPARATOR) ||
+      null);
 
   return {
     city: getMetadataValue(
@@ -173,9 +180,7 @@ function getLocation(
       CrmSyncLocationKey.district,
       GENERIC_LOCATION_KEYS.district,
     ),
-    address: [street, building]
-      .filter((part): part is string => Boolean(part))
-      .join(ADDRESS_SEPARATOR) || null,
+    address,
     latitude: coordinates?.latitude ?? null,
     longitude: coordinates?.longitude ?? null,
   };
