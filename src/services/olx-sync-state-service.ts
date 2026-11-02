@@ -7,7 +7,6 @@ const IMPORTED_PRODUCT_SYNC_KEY_PREFIX = "olx-sync:imported-product:";
 const OLX_CONTACT_ID_PREFIX = "olx-leads:contact:";
 const OLX_THREAD_PROCESSED_PREFIX = "olx-leads:processed:";
 const OLX_THREAD_LOCK_PREFIX = "olx-leads:lock:";
-const OLX_CONTACT_ID_TTL_SECONDS = 30 * 24 * 60 * 60;
 const OLX_THREAD_LOCK_SECONDS = 900;
 
 export const OlxSyncStateService = {
@@ -41,13 +40,9 @@ export const OlxSyncStateService = {
     );
   },
   getOlxContactId: async (interlocutorId: number): Promise<string | null> => {
-    const redis = createRedisClient();
-    const key = `${OLX_CONTACT_ID_PREFIX}${interlocutorId}`;
-    const contactId = await redis.get<string>(key);
-    if (contactId !== null) {
-      await redis.expire(key, OLX_CONTACT_ID_TTL_SECONDS);
-    }
-    return contactId;
+    return createRedisClient().get<string>(
+      `${OLX_CONTACT_ID_PREFIX}${interlocutorId}`,
+    );
   },
   saveOlxContactId: async (
     interlocutorId: number,
@@ -56,7 +51,6 @@ export const OlxSyncStateService = {
     await createRedisClient().set(
       `${OLX_CONTACT_ID_PREFIX}${interlocutorId}`,
       contactId,
-      { ex: OLX_CONTACT_ID_TTL_SECONDS },
     );
   },
   deleteOlxContactId: async (
