@@ -13,26 +13,17 @@ import { Logger } from "../utils/logger.js";
 
 const THREAD_PAGE_SIZE = 100;
 const MAX_THREAD_PAGES = 20;
-const OLX_LEAD_SOURCE = "OLX";
+const OLX_CONTACT_SOURCE = "OLX";
+const OLX_LEAD_SOURCE = "olx";
+const USPACY_LEAD_OWNER_ID = 1;
+const USPACY_LEAD_FUNNEL_ID = 1;
+const USPACY_LEAD_STAGE_ID = 1;
+const USPACY_WARM_LEAD_LABEL = "warm_lead";
 const EMPTY_STRING = "";
-const COMMENT_SEPARATOR = "\n\n";
 const LEAD_TITLE_PREFIX = "Запит з OLX: ";
 const MISSING_PRODUCT_TITLE_PREFIX = "Оголошення ";
 const OLX_BUYER_TITLE_PREFIX = "OLX buyer ";
-const PRODUCT_REFERENCE_PREFIX = "Uspacy product: ";
-const PRODUCT_ID_LABEL = " (ID: ";
-const PRODUCT_LINK_SEPARATOR = " — ";
-const ADVERT_REFERENCE_PREFIX = "OLX advert: ";
-const ADVERT_ID_REFERENCE_PREFIX = "OLX advert ID: ";
-const FIRST_BUYER_MESSAGE_LABEL = "First buyer message: ";
 const OLX_POST_COMMENT_LABEL = "OLX post: ";
-const ADVERT_REFERENCE = (url: string) => `${ADVERT_REFERENCE_PREFIX}${url}`;
-const ADVERT_ID_REFERENCE = (advertId: number) =>
-  `${ADVERT_ID_REFERENCE_PREFIX}${advertId}`;
-const PRODUCT_REFERENCE = (product: Product) =>
-  `${PRODUCT_REFERENCE_PREFIX}${product.title}${PRODUCT_ID_LABEL}${product.id})${
-    product.link ? `${PRODUCT_LINK_SEPARATOR}${product.link}` : EMPTY_STRING
-  }`;
 const OLX_BUYER_TITLE = (interlocutorId: number) =>
   `${OLX_BUYER_TITLE_PREFIX}${interlocutorId}`;
 const THREAD_PAGE_LIMIT_WARNING = "OLX thread polling reached its page limit";
@@ -207,12 +198,6 @@ async function processThread({
       product?.title ??
       advert?.title ??
       `${MISSING_PRODUCT_TITLE_PREFIX}${advertId}`;
-    const productReference = product
-      ? PRODUCT_REFERENCE(product)
-      : ADVERT_ID_REFERENCE(advertId);
-    const advertReference = advert?.url
-      ? ADVERT_REFERENCE(advert.url)
-      : ADVERT_ID_REFERENCE(advertId);
     if (!product) {
       Logger.warn(MISSING_PRODUCT_WARNING, {
         threadUuid,
@@ -228,13 +213,32 @@ async function processThread({
     await UspacyService.createOlxLead({
       payload: {
         title: `${LEAD_TITLE_PREFIX}${productTitle}`,
+        owner: USPACY_LEAD_OWNER_ID,
+        funnelId: USPACY_LEAD_FUNNEL_ID,
         source: OLX_LEAD_SOURCE,
-        comments: [
-          `${FIRST_BUYER_MESSAGE_LABEL}${firstBuyerMessage.text}`,
-          productReference,
-          advertReference,
-        ].join(COMMENT_SEPARATOR),
+        messengers: [],
+        phone: buyerDetails.phone
+          ? [
+              {
+                id: EMPTY_STRING,
+                type: OlxBuyerPhoneType.Work,
+                value: buyerDetails.phone,
+              },
+            ]
+          : [],
+        email: buyerDetails.email
+          ? [
+              {
+                id: EMPTY_STRING,
+                type: OlxBuyerEmailType.Main,
+                value: buyerDetails.email,
+                main: true,
+              },
+            ]
+          : [],
+        leadLabel: [USPACY_WARM_LEAD_LABEL],
         contacts: [Number(contact.id)],
+        kanbanStageId: USPACY_LEAD_STAGE_ID,
       },
     });
 
@@ -297,7 +301,7 @@ async function getOrCreateContact(
 
   const payload: OlxContactPayload = {
     title: OLX_BUYER_TITLE(interlocutorId),
-    source: OLX_LEAD_SOURCE,
+    source: OLX_CONTACT_SOURCE,
     ...(comments ? { comments } : {}),
     ...(details.phone
       ? {

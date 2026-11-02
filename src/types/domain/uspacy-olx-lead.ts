@@ -19,6 +19,12 @@ const OlxContactEmailSchema = z.object({
   main: z.boolean(),
 });
 
+const OlxContactMessengerSchema = z.object({
+  id: z.string(),
+  type: z.string().min(1),
+  link: z.url(),
+});
+
 export const olxContactPayloadSchema = z.object({
   title: z.string().trim().min(1),
   source: z.literal("OLX"),
@@ -27,15 +33,7 @@ export const olxContactPayloadSchema = z.object({
   patronymic: z.string().trim().min(1).optional(),
   phone: z.array(OlxContactPhoneSchema).optional(),
   email: z.array(OlxContactEmailSchema).optional(),
-  messengers: z
-    .array(
-      z.object({
-        id: z.string(),
-        type: z.string().min(1),
-        link: z.url(),
-      }),
-    )
-    .optional(),
+  messengers: z.array(OlxContactMessengerSchema).optional(),
   contactLabel: z
     .enum(["Active customer", "Potential client", "Unknown"])
     .optional(),
@@ -57,9 +55,15 @@ export const UspacyContactsResponseSchema = z.object({
 
 export const OlxLeadPayloadSchema = z.object({
   title: z.string().trim().min(1),
-  source: z.literal("OLX"),
-  comments: z.string().trim().min(1),
+  owner: z.number().int().positive(),
+  funnelId: z.number().int().positive(),
+  source: z.literal("olx"),
+  messengers: z.array(OlxContactMessengerSchema),
+  phone: z.array(OlxContactPhoneSchema),
+  email: z.array(OlxContactEmailSchema),
+  leadLabel: z.array(z.literal("warm_lead")),
   contacts: z.array(z.number().int().positive()).min(1),
+  kanbanStageId: z.number().int().positive(),
 });
 
 export const OlxLeadRequestSchema = OlxLeadPayloadSchema;
