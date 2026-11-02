@@ -54,18 +54,11 @@ export const UspacyContactsResponseSchema = z.object({
   data: z.array(UspacyContactSchema),
 });
 
-export const UspacyLeadContactSchema = z.object({
-  id: UspacyEntityIdSchema,
-  title: z.string().min(1),
-  owner: z.number().int().positive().optional(),
-  entityReferenceType: z.literal(true),
-});
-
 export const OlxLeadPayloadSchema = z.object({
   title: z.string().trim().min(1),
   source: z.literal("OLX"),
   comments: z.string().trim().min(1),
-  contacts: z.array(UspacyLeadContactSchema).length(1),
+  contacts: z.number().int().positive(),
 });
 
 export const OlxLeadRequestSchema = OlxLeadPayloadSchema;

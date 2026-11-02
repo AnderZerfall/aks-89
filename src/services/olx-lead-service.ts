@@ -221,14 +221,7 @@ async function processThread({
           productReference,
           advertReference,
         ].join(COMMENT_SEPARATOR),
-        contacts: [
-          {
-            id: contact.id,
-            title: contact.title,
-            ...(contact.owner === undefined ? {} : { owner: contact.owner }),
-            entityReferenceType: true,
-          },
-        ],
+        contacts: Number(contact.id),
       },
     });
 
