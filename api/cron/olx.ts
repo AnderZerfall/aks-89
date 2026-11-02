@@ -156,11 +156,10 @@ function hasExpectedProductImages(
   product: Product,
   imageCount: number,
 ): boolean {
-  const hasPreview = Boolean(product.previewImageId);
   const fotoFileIds = product.foto?.length
     ? product.foto
     : getAdditionalFotoFileIds(product);
-  return hasPreview && fotoFileIds.length >= imageCount - 1;
+  return fotoFileIds.length >= imageCount;
 }
 
 async function syncProductImages(
@@ -174,15 +173,14 @@ async function syncProductImages(
     productId,
     imageUrls,
   });
-  const [previewImageId, ...foto] = fileIds;
-  if (!previewImageId) return;
+  if (!fileIds.length) return;
 
   await UspacyService.updateProductImages({
     productId,
     payload: {
       isActive: post.status === "active",
-      previewImageId,
-      additional: { foto },
+      previewImageId: null,
+      additional: { foto: fileIds },
     },
   });
 }

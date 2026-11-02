@@ -40,9 +40,7 @@ export const olxContactPayloadSchema = z.object({
     .optional(),
 });
 
-export const OlxContactRequestSchema = z.object({
-  data: z.array(olxContactPayloadSchema).length(1),
-});
+export const OlxContactRequestSchema = olxContactPayloadSchema;
 
 export const UspacyContactSchema = z.object({
   id: UspacyEntityIdSchema,
@@ -70,18 +68,14 @@ export const OlxLeadPayloadSchema = z.object({
   contacts: z.array(UspacyLeadContactSchema).length(1),
 });
 
-export const OlxLeadRequestSchema = z.object({
-  data: z.array(OlxLeadPayloadSchema).length(1),
-});
+export const OlxLeadRequestSchema = OlxLeadPayloadSchema;
 
 export const UspacyLeadSchema = z.object({
   id: UspacyEntityIdSchema,
   title: z.string().min(1),
 });
 
-export const UspacyLeadResponseSchema = z.object({
-  data: z.array(UspacyLeadSchema).length(1),
-});
+export const UspacyLeadResponseSchema = UspacyLeadSchema;
 
 export type OlxContactPayload = z.infer<typeof olxContactPayloadSchema>;
 export type UspacyContact = z.infer<typeof UspacyContactSchema>;

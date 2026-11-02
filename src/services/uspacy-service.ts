@@ -32,6 +32,7 @@ import {
   OlxContactRequestSchema,
   OlxLeadRequestSchema,
   UspacyContactsResponseSchema,
+  UspacyContactSchema,
   UspacyLeadResponseSchema,
   type OlxContactPayload,
   type OlxLeadPayload,
@@ -128,19 +129,16 @@ export const UspacyService = {
   }: {
     payload: OlxContactPayload;
   }): Promise<UspacyContact> => {
-    const { data } = await createRequestWithAuth(
+    return createRequestWithAuth(
       USPACY_ROUTES.createContact.url,
       await getUspacyAccessToken(),
       {
         method: USPACY_ROUTES.createContact.method,
         requestSchema: OlxContactRequestSchema,
-        responseSchema: UspacyContactsResponseSchema,
-        body: { data: [payload] },
+        responseSchema: UspacyContactSchema,
+        body: payload,
       },
     );
-    const contact = data[0];
-    if (!contact) throw new Error("Uspacy returned no created Contact");
-    return contact;
   },
   createOlxLead: async ({
     payload,
@@ -154,7 +152,7 @@ export const UspacyService = {
         method: USPACY_ROUTES.createLead.method,
         requestSchema: OlxLeadRequestSchema,
         responseSchema: UspacyLeadResponseSchema,
-        body: { data: [payload] },
+        body: payload,
       },
     );
   },
@@ -396,7 +394,6 @@ export const UspacyService = {
       : (response.additional?.foto?.length ?? 0);
     Logger.info("Uspacy product images updated", {
       productId,
-      previewImageId: response.previewImageId,
       fotoCount: additionalFotoCount,
     });
     return response;

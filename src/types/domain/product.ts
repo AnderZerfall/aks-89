@@ -114,7 +114,7 @@ export const CreateProductRequestSchema = ProductSchema.omit({
 export const UpdateProductRequestSchema = ProductSchema;
 export const UpdateProductImagesRequestSchema = z.object({
   isActive: z.boolean(),
-  previewImageId: ProductFileIdSchema,
+  previewImageId: ProductFileIdSchema.nullable(),
   additional: z
     .object({
       foto: z.array(ProductFileIdSchema),
