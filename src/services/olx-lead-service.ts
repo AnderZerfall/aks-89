@@ -19,7 +19,7 @@ const OLX_LEAD_SOURCE = "olx";
 const USPACY_LEAD_OWNER_ID = 1;
 const USPACY_LEAD_FUNNEL_ID = 1;
 const USPACY_LEAD_STAGE_ID = 1;
-const USPACY_WARM_LEAD_LABEL = "warm_lead";
+const USPACY_DEFAULT_LEAD_LABEL = "unknown";
 const EMPTY_STRING = "";
 const LEAD_TITLE_PREFIX = "Запит з OLX: ";
 const MISSING_PRODUCT_TITLE_PREFIX = "Оголошення ";
@@ -236,7 +236,7 @@ async function processThread({
             },
           ]
         : [],
-      leadLabel: [USPACY_WARM_LEAD_LABEL],
+      leadLabel: [USPACY_DEFAULT_LEAD_LABEL],
       contacts: [Number(contact.id)],
       kanbanStageId: USPACY_LEAD_STAGE_ID,
     };

@@ -61,7 +61,7 @@ export const OlxLeadPayloadSchema = z.object({
   messengers: z.array(OlxContactMessengerSchema),
   phone: z.array(OlxContactPhoneSchema),
   email: z.array(OlxContactEmailSchema),
-  leadLabel: z.array(z.literal("warm_lead")),
+  leadLabel: z.array(z.literal("unknown")),
   contacts: z.array(z.number().int().positive()).min(1),
   kanbanStageId: z.number().int().positive(),
 });
