@@ -52,7 +52,7 @@ const UspacyFilesResponseSchema = z.object({
     z
       .object({
         id: z.union([z.number(), z.string()]),
-        url: z.string().url(),
+        url: z.url(),
       })
       .loose(),
   ),

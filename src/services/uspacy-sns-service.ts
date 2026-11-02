@@ -11,6 +11,7 @@ const SNS_CERTIFICATE_HOST = "sns.eu-west-1.amazonaws.com";
 export const UspacySnsService = {
   confirmSubscription: async (subscribeUrl: string): Promise<void> => {
     const url = new URL(subscribeUrl);
+    // validate via zod
     if (
       url.protocol !== "https:" ||
       url.hostname !== "auth.uspacy.com" ||
@@ -36,6 +37,7 @@ export const UspacySnsService = {
     notification: Extract<UspacySnsEnvelope, { Type: "Notification" }>,
   ): Promise<boolean> => {
     const certificateUrl = new URL(notification.SigningCertURL);
+    // validate via zod
     if (
       certificateUrl.protocol !== "https:" ||
       certificateUrl.hostname !== SNS_CERTIFICATE_HOST ||
