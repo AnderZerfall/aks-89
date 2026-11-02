@@ -113,14 +113,18 @@ export const UspacyService = {
     return response.data.find((contact) => {
       const phoneMatch =
         normalizedPhone &&
-        contact.phone?.some(
-          (entry) => entry.value.replace(/\D/g, "") === normalizedPhone,
-        );
+        (typeof contact.phone === "string"
+          ? contact.phone.replace(/\D/g, "") === normalizedPhone
+          : contact.phone?.some(
+              (entry) => entry.value.replace(/\D/g, "") === normalizedPhone,
+            ));
       const emailMatch =
         normalizedEmail &&
-        contact.email?.some(
-          (entry) => entry.value.toLowerCase() === normalizedEmail,
-        );
+        (typeof contact.email === "string"
+          ? contact.email.toLowerCase() === normalizedEmail
+          : contact.email?.some(
+              (entry) => entry.value.toLowerCase() === normalizedEmail,
+            ));
       return Boolean(phoneMatch || emailMatch);
     });
   },

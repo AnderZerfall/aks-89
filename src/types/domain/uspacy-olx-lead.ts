@@ -46,8 +46,8 @@ export const UspacyContactSchema = z.object({
   id: UspacyEntityIdSchema,
   title: z.string().min(1),
   owner: z.number().int().positive().optional(),
-  phone: z.array(OlxContactPhoneSchema).optional(),
-  email: z.array(OlxContactEmailSchema).optional(),
+  phone: z.union([z.array(OlxContactPhoneSchema), z.string()]).optional(),
+  email: z.union([z.array(OlxContactEmailSchema), z.string()]).optional(),
 });
 
 export const UspacyContactsResponseSchema = z.object({
