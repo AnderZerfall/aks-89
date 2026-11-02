@@ -82,6 +82,7 @@ export async function syncOlxBuyerMessages(): Promise<OlxLeadSyncCounts> {
   };
 
   await syncThreadPages({ accessToken, adverts, products, counts });
+  Logger.info("OLX buyer-message sync completed", counts);
   return counts;
 }
 
@@ -103,6 +104,11 @@ async function syncThreadPages({
       limit: THREAD_PAGE_SIZE,
     });
     counts.threads += threads.length;
+    Logger.info("Retrieved OLX buyer threads", {
+      offset: page * THREAD_PAGE_SIZE,
+      limit: THREAD_PAGE_SIZE,
+      threadCount: threads.length,
+    });
 
     await processThreadPage({ threads, accessToken, adverts, products, counts });
 
@@ -165,8 +171,14 @@ async function processThread({
   adverts: OlxAdvert[];
   products: Product[];
 }): Promise<boolean> {
-  if (await OlxSyncStateService.hasProcessedOlxThread(threadUuid)) return false;
-  if (!(await OlxSyncStateService.claimOlxThread(threadUuid))) return false;
+  if (await OlxSyncStateService.hasProcessedOlxThread(threadUuid)) {
+    Logger.info("Skipping previously processed OLX thread", { threadUuid });
+    return false;
+  }
+  if (!(await OlxSyncStateService.claimOlxThread(threadUuid))) {
+    Logger.info("Skipping OLX thread claimed by another run", { threadUuid });
+    return false;
+  }
 
   const messages = await OlxService.getMessages({ accessToken, threadUuid });
   const firstBuyerMessage = findFirstBuyerMessage(messages);
