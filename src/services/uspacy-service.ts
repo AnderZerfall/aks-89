@@ -149,6 +149,10 @@ export const UspacyService = {
   }: {
     payload: OlxLeadPayload;
   }): Promise<void> => {
+    Logger.info("Sending OLX lead creation payload to Uspacy", {
+      url: USPACY_ROUTES.createLead.url,
+      payload,
+    });
     await createRequestWithAuth(
       USPACY_ROUTES.createLead.url,
       await getUspacyAccessToken(),
