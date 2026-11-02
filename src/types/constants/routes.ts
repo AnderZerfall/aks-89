@@ -119,7 +119,7 @@ export const USPACY_ROUTES = {
   },
   createContact: {
     method: "POST",
-    url: `${USPACY_API_BASE_URL}/cxm/v1/entities/contacts`,
+    url: `${USPACY_API_BASE_URL}/crm/v1/entities/contacts`,
   },
   createLead: {
     method: "POST",
