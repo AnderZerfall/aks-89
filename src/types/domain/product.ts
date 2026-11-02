@@ -59,6 +59,15 @@ const ProductFileIdsSchema = z.preprocess(
   normalizeProductFileIds,
   z.array(ProductFileIdSchema).optional(),
 );
+const ProductAdditionalSchema = z
+  .object({
+    foto: ProductFileIdsSchema,
+  })
+  .loose();
+const ProductAdditionalCollectionSchema = z.union([
+  z.array(ProductAdditionalSchema),
+  ProductAdditionalSchema,
+]);
 
 export const ProductSchema = z
   .object({
@@ -94,13 +103,7 @@ export const ProductSchema = z
     previewImageId: ProductFileIdSchema.nullable().optional(),
     files: z.array(ProductFileSchema).optional(),
     foto: ProductFileIdsSchema,
-    additional: z
-      .object({
-        foto: ProductFileIdsSchema,
-      })
-      .loose()
-      .nullable()
-      .optional(),
+    additional: ProductAdditionalCollectionSchema.nullable().optional(),
   })
   .loose();
 
@@ -112,7 +115,11 @@ export const UpdateProductRequestSchema = ProductSchema;
 export const UpdateProductImagesRequestSchema = z.object({
   isActive: z.boolean(),
   previewImageId: ProductFileIdSchema,
-  foto: z.array(ProductFileIdSchema),
+  additional: z
+    .object({
+      foto: z.array(ProductFileIdSchema),
+    })
+    .loose(),
 });
 export const CreateProductsBulkRequestSchema = z.object({
   products: z.array(CreateProductRequestSchema),

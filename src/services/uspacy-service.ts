@@ -378,7 +378,17 @@ export const UspacyService = {
       },
     );
 
-    Logger.info("Uspacy product images updated", { productId });
+    const additionalFotoCount = Array.isArray(response.additional)
+      ? response.additional.reduce(
+          (count, item) => count + (item.foto?.length ?? 0),
+          0,
+        )
+      : (response.additional?.foto?.length ?? 0);
+    Logger.info("Uspacy product images updated", {
+      productId,
+      previewImageId: response.previewImageId,
+      fotoCount: additionalFotoCount,
+    });
     return response;
   },
   setProductInactive: async ({ productId }: { productId: string }) => {

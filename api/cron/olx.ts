@@ -74,6 +74,7 @@ async function importOlxPostsToUspacy(
   const existingArticles = new Set(
     uspacyProducts.map((product) => product.article).filter(Boolean),
   );
+  await syncImagesForExistingProducts(accessToken, olxPosts, uspacyProducts);
   const unmatchedPosts = olxPosts.filter((post) => {
     return !hasMatchingUspacyProduct(post, existingArticles);
   });
@@ -99,24 +100,7 @@ async function importOlxPostsToUspacy(
     const createdProduct = await UspacyService.createProduct({
       payload: OlxPostMapper.toDomain(post),
     });
-    const imageUrls = post.images?.map((image) => image.url) ?? [];
-    const fileIds = imageUrls.length
-      ? await UspacyService.uploadProductImages({
-          productId: createdProduct.id,
-          imageUrls,
-        })
-      : [];
-    const [previewImageId, ...foto] = fileIds;
-    if (previewImageId) {
-      await UspacyService.updateProductImages({
-        productId: createdProduct.id,
-        payload: {
-          isActive: post.status === "active",
-          previewImageId,
-          foto,
-        },
-      });
-    }
+    await syncProductImages(createdProduct.id, post);
 
     await OlxSyncStateService.saveImportedProductSyncAt(
       article,
@@ -125,6 +109,82 @@ async function importOlxPostsToUspacy(
     existingArticles.add(article);
     counts.imported++;
   }
+}
+
+async function syncImagesForExistingProducts(
+  accessToken: string,
+  olxPosts: OlxAdvert[],
+  uspacyProducts: Product[],
+): Promise<void> {
+  const productsToBackfill = olxPosts.flatMap((post) => {
+    const product = uspacyProducts.find(
+      (item) =>
+        item.article === post.id.toString() ||
+        (post.externalId != null && item.article === post.externalId),
+    );
+    const imageCount = post.images?.length ?? 0;
+    return product &&
+      imageCount > 0 &&
+      !hasExpectedProductImages(product, imageCount)
+      ? [{ post, product }]
+      : [];
+  });
+  if (!productsToBackfill.length) return;
+
+  const enrichedPosts = await OlxService.enrichPosts(
+    accessToken,
+    productsToBackfill.map(({ post }) => post),
+  );
+
+  for (const [index, post] of enrichedPosts.entries()) {
+    const product = productsToBackfill[index]?.product;
+    if (!product) continue;
+
+    const imageCount = post.images?.length ?? 0;
+    if (!imageCount || hasExpectedProductImages(product, imageCount)) continue;
+
+    Logger.info("Backfilling OLX images for existing Uspacy product", {
+      productId: product.id,
+      advertId: post.id,
+      imageCount,
+    });
+    await syncProductImages(product.id, post);
+  }
+}
+
+function hasExpectedProductImages(
+  product: Product,
+  imageCount: number,
+): boolean {
+  const hasPreview = Boolean(product.previewImageId);
+  const fotoFileIds = product.foto?.length
+    ? product.foto
+    : getAdditionalFotoFileIds(product);
+  return hasPreview && fotoFileIds.length >= imageCount - 1;
+}
+
+async function syncProductImages(
+  productId: string,
+  post: OlxAdvert,
+): Promise<void> {
+  const imageUrls = post.images?.map((image) => image.url) ?? [];
+  if (!imageUrls.length) return;
+
+  const fileIds = await UspacyService.uploadProductImages({
+    productId,
+    imageUrls,
+  });
+  const [previewImageId, ...foto] = fileIds;
+  if (!previewImageId) return;
+
+  await UspacyService.updateProductImages({
+    productId,
+    payload: {
+      isActive: post.status === "active",
+      previewImageId,
+      additional: { foto },
+    },
+  });
 }
 
 function hasMatchingUspacyProduct(
@@ -342,16 +402,18 @@ async function getOlxContact(
 }
 
 async function createWatermarkedImageUrls(product: Product): Promise<string[]> {
+  const productAdditionalFoto = getAdditionalFotoFileIds(product);
   const imageProduct =
     product.foto?.length ||
-    product.additional?.foto?.length ||
+    productAdditionalFoto.length ||
     product.files?.length
       ? product
       : await UspacyService.getProduct(product.id);
+  const additionalFotoFileIds = getAdditionalFotoFileIds(imageProduct);
   const fotoFileIds =
     imageProduct.foto?.length
       ? imageProduct.foto
-      : (imageProduct.additional?.foto ?? []);
+      : additionalFotoFileIds;
 
   Logger.info("Checking Uspacy product foto field", {
     productId: product.id,
@@ -360,7 +422,7 @@ async function createWatermarkedImageUrls(product: Product): Promise<string[]> {
     fotoCount: fotoFileIds.length,
     fotoFieldPath: imageProduct.foto?.length
       ? "foto"
-      : imageProduct.additional?.foto?.length
+      : additionalFotoFileIds.length
         ? "additional.foto"
         : "not found",
   });
@@ -383,6 +445,15 @@ async function createWatermarkedImageUrls(product: Product): Promise<string[]> {
       ),
     ),
   );
+}
+
+function getAdditionalFotoFileIds(product: Product): string[] {
+  const additional = product.additional;
+  if (!additional) return [];
+  if (Array.isArray(additional)) {
+    return additional.flatMap((item) => item.foto ?? []);
+  }
+  return additional.foto ?? [];
 }
 
 async function getOlxLocationFromProduct(
