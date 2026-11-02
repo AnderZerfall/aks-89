@@ -6,6 +6,7 @@ import type { OlxAdvert } from "../types/dto/olx/olx-adverts.dto.js";
 import type { OlxMessageResponseDto } from "../types/dto/olx/olx-message.dto.js";
 import type {
   OlxContactPayload,
+  OlxLeadPayload,
   UspacyContact,
 } from "../types/domain/uspacy-olx-lead.js";
 import { OlxMessage } from "../types/constants/olx.js";
@@ -210,36 +211,40 @@ async function processThread({
       advertId,
       contactId: contact.id,
     });
-    await UspacyService.createOlxLead({
-      payload: {
-        title: `${LEAD_TITLE_PREFIX}${productTitle}`,
-        owner: USPACY_LEAD_OWNER_ID,
-        funnelId: USPACY_LEAD_FUNNEL_ID,
-        source: OLX_LEAD_SOURCE,
-        messengers: [],
-        phone: buyerDetails.phone
-          ? [
-              {
-                id: EMPTY_STRING,
-                type: OlxBuyerPhoneType.Work,
-                value: buyerDetails.phone,
-              },
-            ]
-          : [],
-        email: buyerDetails.email
-          ? [
-              {
-                id: EMPTY_STRING,
-                type: OlxBuyerEmailType.Main,
-                value: buyerDetails.email,
-                main: true,
-              },
-            ]
-          : [],
-        leadLabel: [USPACY_WARM_LEAD_LABEL],
-        contacts: [Number(contact.id)],
-        kanbanStageId: USPACY_LEAD_STAGE_ID,
-      },
+    const leadPayload: OlxLeadPayload = {
+      title: `${LEAD_TITLE_PREFIX}${productTitle}`,
+      owner: USPACY_LEAD_OWNER_ID,
+      funnelId: USPACY_LEAD_FUNNEL_ID,
+      source: OLX_LEAD_SOURCE,
+      messengers: [],
+      phone: buyerDetails.phone
+        ? [
+            {
+              id: EMPTY_STRING,
+              type: OlxBuyerPhoneType.Work,
+              value: buyerDetails.phone,
+            },
+          ]
+        : [],
+      email: buyerDetails.email
+        ? [
+            {
+              id: EMPTY_STRING,
+              type: OlxBuyerEmailType.Main,
+              value: buyerDetails.email,
+              main: true,
+            },
+          ]
+        : [],
+      leadLabel: [USPACY_WARM_LEAD_LABEL],
+      contacts: [Number(contact.id)],
+      kanbanStageId: USPACY_LEAD_STAGE_ID,
+    };
+    await createOlxLeadWithStaleContactRefresh({
+      leadPayload,
+      interlocutorId,
+      buyerDetails,
+      contactComments,
     });
 
     await OlxSyncStateService.markOlxThreadProcessed(threadUuid);
@@ -333,6 +338,56 @@ async function getOrCreateContact(
     String(contact.id),
   );
   return contact;
+}
+
+async function createOlxLeadWithStaleContactRefresh({
+  leadPayload,
+  interlocutorId,
+  buyerDetails,
+  contactComments,
+}: {
+  leadPayload: OlxLeadPayload;
+  interlocutorId: number;
+  buyerDetails: BuyerDetails;
+  contactComments: string | undefined;
+}): Promise<void> {
+  try {
+    await UspacyService.createOlxLead({ payload: leadPayload });
+  } catch (error) {
+    if (!isMissingRelatedEntityError(error)) throw error;
+
+    const staleContactId = String(leadPayload.contacts[0]);
+    const removed = await OlxSyncStateService.deleteOlxContactId(
+      interlocutorId,
+      staleContactId,
+    );
+    if (!removed) throw error;
+
+    const contact = await getOrCreateContact(
+      interlocutorId,
+      buyerDetails,
+      contactComments,
+    );
+    Logger.warn("Refreshing stale Uspacy contact mapping for OLX buyer", {
+      interlocutorId,
+      staleContactId,
+      refreshedContactId: contact.id,
+    });
+    await UspacyService.createOlxLead({
+      payload: {
+        ...leadPayload,
+        contacts: [Number(contact.id)],
+      },
+    });
+  }
+}
+
+function isMissingRelatedEntityError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    error.message.startsWith("API Error [404]") &&
+    error.message.includes("related entity element not found")
+  );
 }
 
 function extractBuyerDetails(message: string): BuyerDetails {
