@@ -25,6 +25,7 @@ const PRODUCT_LINK_SEPARATOR = " — ";
 const ADVERT_REFERENCE_PREFIX = "OLX advert: ";
 const ADVERT_ID_REFERENCE_PREFIX = "OLX advert ID: ";
 const FIRST_BUYER_MESSAGE_LABEL = "First buyer message: ";
+const OLX_POST_COMMENT_LABEL = "OLX post: ";
 const ADVERT_REFERENCE = (url: string) => `${ADVERT_REFERENCE_PREFIX}${url}`;
 const ADVERT_ID_REFERENCE = (advertId: number) =>
   `${ADVERT_ID_REFERENCE_PREFIX}${advertId}`;
@@ -192,8 +193,15 @@ async function processThread({
     }
 
     const buyerDetails = extractBuyerDetails(firstBuyerMessage.text);
-    const contact = await getOrCreateContact(interlocutorId, buyerDetails);
     const advert = adverts.find((item) => item.id === advertId);
+    const contactComments = advert?.url
+      ? `${OLX_POST_COMMENT_LABEL}${advert.url}`
+      : undefined;
+    const contact = await getOrCreateContact(
+      interlocutorId,
+      buyerDetails,
+      contactComments,
+    );
     const product = findProduct(products, advertId, advert?.externalId);
     const productTitle =
       product?.title ??
@@ -212,6 +220,11 @@ async function processThread({
       });
     }
 
+    Logger.info("Creating Uspacy lead with OLX contact", {
+      threadUuid,
+      advertId,
+      contactId: contact.id,
+    });
     await UspacyService.createOlxLead({
       payload: {
         title: `${LEAD_TITLE_PREFIX}${productTitle}`,
@@ -259,6 +272,7 @@ function findFirstBuyerMessage(
 async function getOrCreateContact(
   interlocutorId: number,
   details: BuyerDetails,
+  comments?: string,
 ): Promise<UspacyContact> {
   const storedContactId = await OlxSyncStateService.getOlxContactId(
     interlocutorId,
@@ -284,6 +298,7 @@ async function getOrCreateContact(
   const payload: OlxContactPayload = {
     title: OLX_BUYER_TITLE(interlocutorId),
     source: OLX_LEAD_SOURCE,
+    ...(comments ? { comments } : {}),
     ...(details.phone
       ? {
           phone: [

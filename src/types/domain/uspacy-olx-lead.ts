@@ -22,6 +22,7 @@ const OlxContactEmailSchema = z.object({
 export const olxContactPayloadSchema = z.object({
   title: z.string().trim().min(1),
   source: z.literal("OLX"),
+  comments: z.string().trim().min(1).optional(),
   lastName: z.string().trim().min(1).optional(),
   patronymic: z.string().trim().min(1).optional(),
   phone: z.array(OlxContactPhoneSchema).optional(),
