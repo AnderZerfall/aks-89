@@ -13,6 +13,7 @@ import type {
   CreateProductRequest,
   CreateProductsBulkRequest,
   Product,
+  UpdateProductImagesRequest,
   UpdateProductRequest,
 } from "../types/domain/product.js";
 import {
@@ -20,6 +21,7 @@ import {
   CreateProductsBulkRequestSchema,
   ListProductsResponseSchema,
   ProductSchema,
+  UpdateProductImagesRequestSchema,
   UpdateProductRequestSchema,
 } from "../types/domain/product.js";
 import {
@@ -357,6 +359,26 @@ export const UspacyService = {
     );
 
     Logger.info("Product was successfully updated!", response);
+    return response;
+  },
+  updateProductImages: async ({
+    productId,
+    payload,
+  }: {
+    productId: string;
+    payload: UpdateProductImagesRequest;
+  }) => {
+    const response = await createRequest(
+      USPACY_ROUTES.updateProduct.url(productId),
+      {
+        method: USPACY_ROUTES.updateProduct.method,
+        requestSchema: UpdateProductImagesRequestSchema,
+        responseSchema: ProductSchema,
+        body: payload,
+      },
+    );
+
+    Logger.info("Uspacy product images updated", { productId });
     return response;
   },
   setProductInactive: async ({ productId }: { productId: string }) => {

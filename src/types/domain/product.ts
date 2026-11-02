@@ -84,6 +84,7 @@ export const ProductSchema = z
       .nullable()
       .transform((quantity) => quantity ?? 0),
     description: z.string(),
+    comment: z.string().nullable().optional(),
     link: z
       .string()
       .nullable()
@@ -108,6 +109,11 @@ export const CreateProductRequestSchema = ProductSchema.omit({
   isActive: true,
 });
 export const UpdateProductRequestSchema = ProductSchema;
+export const UpdateProductImagesRequestSchema = z.object({
+  isActive: z.boolean(),
+  previewImageId: ProductFileIdSchema,
+  foto: z.array(ProductFileIdSchema),
+});
 export const CreateProductsBulkRequestSchema = z.object({
   products: z.array(CreateProductRequestSchema),
 });
@@ -124,6 +130,9 @@ export type Product = z.infer<typeof ProductSchema>;
 export type ListProductParams = z.infer<typeof ListProductParamsSchema>;
 export type CreateProductRequest = z.infer<typeof CreateProductRequestSchema>;
 export type UpdateProductRequest = z.infer<typeof UpdateProductRequestSchema>;
+export type UpdateProductImagesRequest = z.infer<
+  typeof UpdateProductImagesRequestSchema
+>;
 export type CreateProductsBulkRequest = z.infer<
   typeof CreateProductsBulkRequestSchema
 >;

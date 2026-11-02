@@ -17,7 +17,7 @@ const OlxMessageDtoSchema = z
     text: z.string(),
     attachments: z.array(OlxAttachmentsSchema).nullable(),
     isRead: z.boolean(),
-    csv: z.array(OlxAttachmentsSchema).nullable(),
+    csv: z.array(OlxAttachmentsSchema).nullable().optional(),
   })
   .loose();
 

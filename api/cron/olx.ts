@@ -106,20 +106,21 @@ async function importOlxPostsToUspacy(
           imageUrls,
         })
       : [];
-    const syncedProduct = fileIds.length
-      ? await UspacyService.updateProduct({
-          productId: createdProduct.id,
-          payload: {
-            ...createdProduct,
-            previewImageId: fileIds[0],
-            foto: fileIds.slice(1),
-          },
-        })
-      : createdProduct;
+    const [previewImageId, ...foto] = fileIds;
+    if (previewImageId) {
+      await UspacyService.updateProductImages({
+        productId: createdProduct.id,
+        payload: {
+          isActive: post.status === "active",
+          previewImageId,
+          foto,
+        },
+      });
+    }
 
     await OlxSyncStateService.saveImportedProductSyncAt(
       article,
-      getProductSyncTimestamp(syncedProduct) ?? new Date(),
+      getProductSyncTimestamp(createdProduct) ?? new Date(),
     );
     existingArticles.add(article);
     counts.imported++;
@@ -388,7 +389,7 @@ async function getOlxLocationFromProduct(
   accessToken: string,
   product: Product,
 ): Promise<CreateOlxAdvertRequestDto["location"] | null> {
-  const { metadata } = CrmSyncUtil.parseDescription(product.description);
+  const metadata = CrmSyncUtil.parseProductMetadata(product.description);
   const parsedLocation = CrmSyncUtil.getLocation(metadata);
   if (
     !parsedLocation?.city ||

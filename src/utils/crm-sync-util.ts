@@ -269,6 +269,7 @@ type CrmSyncDescription = {
   publicDescription: string;
   metadata: Map<string, string>;
 };
+const EMPTY_DESCRIPTION = "";
 
 function normalizeKey(value: string): string {
   return value
@@ -464,31 +465,48 @@ function getLocation(
   };
 }
 
+function parseLegacyDescription(description: string): CrmSyncDescription {
+  const marker = CRM_SYNC_MARKER.exec(description);
+  if (!marker || marker.index === undefined) {
+    return { publicDescription: description.trim(), metadata: new Map() };
+  }
+
+  const metadataStart = marker.index + marker[0].length;
+  const markerStart =
+    marker.index +
+    marker[0].search(new RegExp(`${escapeRegExp(ATTRIBUTES_OPEN_TAG)}|---`));
+  const publicDescription = closeOpenHtmlTags(
+    description.slice(0, markerStart).replace(/<p(?:\s[^>]*)?>[\t ]*$/i, ""),
+  ).trim();
+  const closingTagIndex = description.indexOf(
+    ATTRIBUTES_CLOSE_TAG,
+    metadataStart,
+  );
+  const metadataEnd =
+    closingTagIndex === -1 ? description.length : closingTagIndex;
+
+  return {
+    publicDescription,
+    metadata: parseMetadata(description.slice(metadataStart, metadataEnd)),
+  };
+}
+
+function parseProductDescription(description: string): CrmSyncDescription {
+  if (CRM_SYNC_MARKER.test(description)) {
+    return parseLegacyDescription(description);
+  }
+  return {
+    publicDescription: EMPTY_DESCRIPTION,
+    metadata: parseMetadata(description),
+  };
+}
+
 export const CrmSyncUtil = {
-  parseDescription(description: string): CrmSyncDescription {
-    const marker = CRM_SYNC_MARKER.exec(description);
-    if (!marker || marker.index === undefined) {
-      return { publicDescription: description.trim(), metadata: new Map() };
-    }
+  parseDescription: parseLegacyDescription,
+  parseProductDescription,
 
-    const metadataStart = marker.index + marker[0].length;
-    const markerStart =
-      marker.index +
-      marker[0].search(new RegExp(`${escapeRegExp(ATTRIBUTES_OPEN_TAG)}|---`));
-    const publicDescription = closeOpenHtmlTags(
-      description.slice(0, markerStart).replace(/<p(?:\s[^>]*)?>[\t ]*$/i, ""),
-    ).trim();
-    const closingTagIndex = description.indexOf(
-      ATTRIBUTES_CLOSE_TAG,
-      metadataStart,
-    );
-    const metadataEnd =
-      closingTagIndex === -1 ? description.length : closingTagIndex;
-
-    return {
-      publicDescription,
-      metadata: parseMetadata(description.slice(metadataStart, metadataEnd)),
-    };
+  parseProductMetadata(description: string): Map<string, string> {
+    return parseProductDescription(description).metadata;
   },
 
   getLocation,

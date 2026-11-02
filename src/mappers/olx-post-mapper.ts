@@ -14,15 +14,9 @@ import { CrmSyncUtil } from "../utils/crm-sync-util.js";
 import { Price } from "../utils/price.js";
 import { ProductCategoryMapper } from "./product-category-mapper.js";
 
-const ATTRIBUTES_OPEN_TAG = "[Атрибути]";
-const ATTRIBUTES_CLOSE_TAG = "[/Атрибути]";
 const METADATA_LINE_SEPARATOR = "<br>";
 const ATTRIBUTE_VALUE_SEPARATOR = ", ";
-const LOCATION_SECTION_TITLE = "ЛОКАЦІЯ";
-const ATTRIBUTES_SECTION_TITLE = "ХАРАКТЕРИСТИКИ";
 const EMPTY_STRING = "";
-const BLANK_METADATA_LINE = EMPTY_STRING;
-const DESCRIPTION_SECTION_SEPARATOR = "\n\n";
 const SAFE_METADATA_SEPARATOR = " ";
 const ACTIVE_ADVERT_STATUS = "active";
 const INVALID_PRICE_ERROR = (value: string | number) =>
@@ -63,12 +57,8 @@ function toDomain(dto: OlxEnrichedAdvert): CreateProductRequest {
     availability: availability,
     quantity: 1,
     reservedQuantity: 0,
-    description: [
-      DescriptionBuilder.build(dto.description),
-      buildCrmSyncBlock(dto),
-    ]
-      .filter(Boolean)
-      .join(DESCRIPTION_SECTION_SEPARATOR),
+    description: buildProductMetadata(dto),
+    comment: DescriptionBuilder.build(dto.description),
     link: cleanLink,
     prices: [
       {
@@ -80,9 +70,8 @@ function toDomain(dto: OlxEnrichedAdvert): CreateProductRequest {
   };
 }
 
-function buildCrmSyncBlock(dto: OlxEnrichedAdvert): string {
+function buildProductMetadata(dto: OlxEnrichedAdvert): string {
   const metadata = [
-    LOCATION_SECTION_TITLE,
     formatMetadataLine(CrmSyncLocationKey.city, dto.enrichedLocation.city),
     formatMetadataLine(CrmSyncLocationKey.region, dto.enrichedLocation.region),
     formatMetadataLine(
@@ -94,8 +83,6 @@ function buildCrmSyncBlock(dto: OlxEnrichedAdvert): string {
       LocationCommentKey.address,
       dto.enrichedLocation.address || Placeholder.NotFound,
     ),
-    BLANK_METADATA_LINE,
-    ATTRIBUTES_SECTION_TITLE,
   ];
 
   for (const attribute of dto.attributes ?? []) {
@@ -114,11 +101,7 @@ function buildCrmSyncBlock(dto: OlxEnrichedAdvert): string {
     }
   }
 
-  return [
-    ATTRIBUTES_OPEN_TAG,
-    ...metadata,
-    ATTRIBUTES_CLOSE_TAG,
-  ].join(METADATA_LINE_SEPARATOR);
+  return metadata.join(METADATA_LINE_SEPARATOR);
 }
 
 function formatMetadataLine(key: string, value: string): string {

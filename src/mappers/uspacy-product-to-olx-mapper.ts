@@ -49,9 +49,12 @@ export const UspacyProductToOlxMapper = {
       return null;
     }
 
-    const { publicDescription, metadata } = CrmSyncUtil.parseDescription(
+    const productDescription = CrmSyncUtil.parseProductDescription(
       product.description,
     );
+    const publicDescription =
+      product.comment ?? productDescription.publicDescription;
+    const metadata = productDescription.metadata;
     const { value, currency } = Price.fromMinorUnits(
       productPrice.price,
       productPrice.currency,
