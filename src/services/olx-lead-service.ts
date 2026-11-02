@@ -180,64 +180,72 @@ async function processThread({
     return false;
   }
 
-  const messages = await OlxService.getMessages({ accessToken, threadUuid });
-  const firstBuyerMessage = findFirstBuyerMessage(messages);
-  if (!firstBuyerMessage) {
-    Logger.info(THREAD_SKIP_INFO, {
-      threadUuid,
-    });
-    return false;
-  }
+  let processed = false;
+  try {
+    const messages = await OlxService.getMessages({ accessToken, threadUuid });
+    const firstBuyerMessage = findFirstBuyerMessage(messages);
+    if (!firstBuyerMessage) {
+      Logger.info(THREAD_SKIP_INFO, {
+        threadUuid,
+      });
+      return false;
+    }
 
-  const buyerDetails = extractBuyerDetails(firstBuyerMessage.text);
-  const contact = await getOrCreateContact(interlocutorId, buyerDetails);
-  const advert = adverts.find((item) => item.id === advertId);
-  const product = findProduct(products, advertId, advert?.externalId);
-  const productTitle =
-    product?.title ??
-    advert?.title ??
-    `${MISSING_PRODUCT_TITLE_PREFIX}${advertId}`;
-  const productReference = product
-    ? PRODUCT_REFERENCE(product)
-    : ADVERT_ID_REFERENCE(advertId);
-  const advertReference = advert?.url
-    ? ADVERT_REFERENCE(advert.url)
-    : ADVERT_ID_REFERENCE(advertId);
-  if (!product) {
-    Logger.warn(MISSING_PRODUCT_WARNING, {
+    const buyerDetails = extractBuyerDetails(firstBuyerMessage.text);
+    const contact = await getOrCreateContact(interlocutorId, buyerDetails);
+    const advert = adverts.find((item) => item.id === advertId);
+    const product = findProduct(products, advertId, advert?.externalId);
+    const productTitle =
+      product?.title ??
+      advert?.title ??
+      `${MISSING_PRODUCT_TITLE_PREFIX}${advertId}`;
+    const productReference = product
+      ? PRODUCT_REFERENCE(product)
+      : ADVERT_ID_REFERENCE(advertId);
+    const advertReference = advert?.url
+      ? ADVERT_REFERENCE(advert.url)
+      : ADVERT_ID_REFERENCE(advertId);
+    if (!product) {
+      Logger.warn(MISSING_PRODUCT_WARNING, {
+        threadUuid,
+        advertId,
+      });
+    }
+
+    await UspacyService.createOlxLead({
+      payload: {
+        title: `${LEAD_TITLE_PREFIX}${productTitle}`,
+        source: OLX_LEAD_SOURCE,
+        comments: [
+          `${FIRST_BUYER_MESSAGE_LABEL}${firstBuyerMessage.text}`,
+          productReference,
+          advertReference,
+        ].join(COMMENT_SEPARATOR),
+        contacts: [
+          {
+            id: contact.id,
+            title: contact.title,
+            ...(contact.owner === undefined ? {} : { owner: contact.owner }),
+            entityReferenceType: true,
+          },
+        ],
+      },
+    });
+
+    await OlxSyncStateService.markOlxThreadProcessed(threadUuid);
+    processed = true;
+    Logger.info(LEAD_CREATED_INFO, {
       threadUuid,
       advertId,
+      contactId: contact.id,
+      productId: product?.id,
     });
+    return true;
+  } finally {
+    if (!processed) {
+      await OlxSyncStateService.releaseOlxThreadClaim(threadUuid);
+    }
   }
-
-  await UspacyService.createOlxLead({
-    payload: {
-      title: `${LEAD_TITLE_PREFIX}${productTitle}`,
-      source: OLX_LEAD_SOURCE,
-      comments: [
-        `${FIRST_BUYER_MESSAGE_LABEL}${firstBuyerMessage.text}`,
-        productReference,
-        advertReference,
-      ].join(COMMENT_SEPARATOR),
-      contacts: [
-        {
-          id: contact.id,
-          title: contact.title,
-          ...(contact.owner === undefined ? {} : { owner: contact.owner }),
-          entityReferenceType: true,
-        },
-      ],
-    },
-  });
-
-  await OlxSyncStateService.markOlxThreadProcessed(threadUuid);
-  Logger.info(LEAD_CREATED_INFO, {
-    threadUuid,
-    advertId,
-    contactId: contact.id,
-    productId: product?.id,
-  });
-  return true;
 }
 
 function findFirstBuyerMessage(

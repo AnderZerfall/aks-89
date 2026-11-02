@@ -77,7 +77,6 @@ export const UspacyProductToOlxMapper = {
       },
       images: validImages.map((url) => ({ url })),
       externalId: product.article,
-      ...(product.link ? { externalUrl: product.link } : {}),
     };
   },
 };

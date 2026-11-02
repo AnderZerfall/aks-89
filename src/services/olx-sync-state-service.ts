@@ -68,6 +68,9 @@ export const OlxSyncStateService = {
     );
     return result === "OK";
   },
+  releaseOlxThreadClaim: async (threadUuid: string): Promise<void> => {
+    await createRedisClient().del(`${OLX_THREAD_LOCK_PREFIX}${threadUuid}`);
+  },
   markOlxThreadProcessed: async (threadUuid: string): Promise<void> => {
     const redis = createRedisClient();
     await redis.set(`${OLX_THREAD_PROCESSED_PREFIX}${threadUuid}`, "done");
