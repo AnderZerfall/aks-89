@@ -11,6 +11,7 @@ export type RequestOptions<
   TResponseSchema extends z.ZodType,
 > = {
   method: string;
+  redirect?: RequestRedirect;
   requestSchema: TRequestSchema;
   responseSchema: TResponseSchema;
   body?: z.input<TRequestSchema>;
@@ -43,6 +44,7 @@ export async function createRequest<
           ...options.headers,
         }
       : DEFAULT_HEADERS,
+    ...(options.redirect ? { redirect: options.redirect } : {}),
   });
 
   if (!response.ok) {

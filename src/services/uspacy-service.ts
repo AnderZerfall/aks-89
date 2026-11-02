@@ -23,6 +23,19 @@ import {
   UpdateProductRequestSchema,
 } from "../types/domain/product.js";
 import {
+  UspacyDealProductsResponseSchema,
+  UspacyDealResponseSchema,
+} from "../types/domain/uspacy-deal.js";
+import {
+  OlxContactRequestSchema,
+  OlxLeadRequestSchema,
+  UspacyContactsResponseSchema,
+  UspacyLeadResponseSchema,
+  type OlxContactPayload,
+  type OlxLeadPayload,
+  type UspacyContact,
+} from "../types/domain/uspacy-olx-lead.js";
+import {
   createRequest,
   createRequestWithAuth,
   EmptyObjectSchema,
@@ -48,6 +61,76 @@ const UspacyFilesResponseSchema = z.object({
 let cachedAccessToken: { token: string; expiresAt: number } | undefined;
 
 export const UspacyService = {
+  searchOlxContact: async ({
+    phone,
+    email,
+  }: {
+    phone?: string;
+    email?: string;
+  }): Promise<UspacyContact | undefined> => {
+    if (!phone && !email) return undefined;
+
+    const response = await createRequestWithAuth(
+      USPACY_ROUTES.searchContacts.url(phone, email),
+      await getUspacyAccessToken(),
+      {
+        method: USPACY_ROUTES.searchContacts.method,
+        requestSchema: NoRequestSchema,
+        responseSchema: UspacyContactsResponseSchema,
+      },
+    );
+    const normalizedPhone = phone?.replace(/\D/g, "");
+    const normalizedEmail = email?.toLowerCase();
+
+    return response.data.find((contact) => {
+      const phoneMatch =
+        normalizedPhone &&
+        contact.phone?.some(
+          (entry) => entry.value.replace(/\D/g, "") === normalizedPhone,
+        );
+      const emailMatch =
+        normalizedEmail &&
+        contact.email?.some(
+          (entry) => entry.value.toLowerCase() === normalizedEmail,
+        );
+      return Boolean(phoneMatch || emailMatch);
+    });
+  },
+  createOlxContact: async ({
+    payload,
+  }: {
+    payload: OlxContactPayload;
+  }): Promise<UspacyContact> => {
+    const { data } = await createRequestWithAuth(
+      USPACY_ROUTES.createContact.url,
+      await getUspacyAccessToken(),
+      {
+        method: USPACY_ROUTES.createContact.method,
+        requestSchema: OlxContactRequestSchema,
+        responseSchema: UspacyContactsResponseSchema,
+        body: { data: [payload] },
+      },
+    );
+    const contact = data[0];
+    if (!contact) throw new Error("Uspacy returned no created Contact");
+    return contact;
+  },
+  createOlxLead: async ({
+    payload,
+  }: {
+    payload: OlxLeadPayload;
+  }): Promise<void> => {
+    await createRequestWithAuth(
+      USPACY_ROUTES.createLead.url,
+      await getUspacyAccessToken(),
+      {
+        method: USPACY_ROUTES.createLead.method,
+        requestSchema: OlxLeadRequestSchema,
+        responseSchema: UspacyLeadResponseSchema,
+        body: { data: [payload] },
+      },
+    );
+  },
   getProductFileUrls: async ({
     productId,
     fileIds,
@@ -110,6 +193,28 @@ export const UspacyService = {
     });
     return response;
   },
+  getDeal: async (dealId: string) => {
+    return createRequestWithAuth(
+      USPACY_ROUTES.getDeal.url(dealId),
+      await getUspacyAccessToken(),
+      {
+        method: USPACY_ROUTES.getDeal.method,
+        requestSchema: NoRequestSchema,
+        responseSchema: UspacyDealResponseSchema,
+      },
+    );
+  },
+  getDealProducts: async (dealId: string) => {
+    return createRequestWithAuth(
+      USPACY_ROUTES.getDealProducts.url(dealId),
+      await getUspacyAccessToken(),
+      {
+        method: "GET",
+        requestSchema: NoRequestSchema,
+        responseSchema: UspacyDealProductsResponseSchema,
+      },
+    );
+  },
   listProducts: async (page: number, list: number) => {
     const response = await createRequest(
       USPACY_ROUTES.listProducts.url(page, list),
@@ -167,6 +272,25 @@ export const UspacyService = {
     );
 
     Logger.info("Product was successfully updated!", response);
+    return response;
+  },
+  setProductInactive: async ({ productId }: { productId: string }) => {
+    const response = await createRequest(
+      USPACY_ROUTES.updateProduct.url(productId),
+      {
+        method: USPACY_ROUTES.updateProduct.method,
+        requestSchema: z.object({ isActive: z.literal(false) }),
+        responseSchema: z
+          .object({
+            id: z.union([z.string(), z.number()]).optional(),
+            isActive: z.boolean().optional(),
+          })
+          .transform(() => undefined),
+        body: { isActive: false },
+      },
+    );
+
+    Logger.info("Uspacy product marked inactive", { productId });
     return response;
   },
   deleteProduct: async ({ productId }: { productId: string }) => {

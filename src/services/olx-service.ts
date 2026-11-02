@@ -28,6 +28,14 @@ import {
 } from "../types/dto/olx/olx-auth.dto.js";
 import type { OlxRegionDto } from "../types/dto/olx/olx-location.dto.js";
 import {
+  OlxMessageResponseSchema,
+  type OlxMessageResponseDto,
+} from "../types/dto/olx/olx-message.dto.js";
+import {
+  OlxThreadRequestSchema,
+  OlxThreadResponseSchema,
+} from "../types/dto/olx/olx-thread.dto.js";
+import {
   OlxCitySchema,
   OlxDistrictSchema,
   OlxLocationLookupResponseSchema,
@@ -99,6 +107,45 @@ export const OlxService = {
 
     Logger.info("Posts retrived successfully!", posts);
     return posts;
+  },
+  getThreads: async ({
+    accessToken,
+    offset,
+    limit,
+  }: {
+    accessToken: string;
+    offset: number;
+    limit: number;
+  }) => {
+    OlxThreadRequestSchema.parse({ offset, limit });
+    return createRequestWithAuth(
+      OLX_ROUTES.getThreads.url(offset, limit),
+      accessToken,
+      {
+        method: OLX_ROUTES.getThreads.method,
+        requestSchema: NoRequestSchema,
+        responseSchema: OlxThreadResponseSchema,
+        headers: { Version: "2.0" },
+      },
+    );
+  },
+  getMessages: async ({
+    accessToken,
+    threadUuid,
+  }: {
+    accessToken: string;
+    threadUuid: string;
+  }): Promise<OlxMessageResponseDto> => {
+    return createRequestWithAuth(
+      OLX_ROUTES.getMessages.url(threadUuid),
+      accessToken,
+      {
+        method: OLX_ROUTES.getMessages.method,
+        requestSchema: NoRequestSchema,
+        responseSchema: OlxMessageResponseSchema,
+        headers: { Version: "2.0" },
+      },
+    );
   },
   createPost: async ({
     accessToken,

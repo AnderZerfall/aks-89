@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/olx",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/olx-messages",
+      "schedule": "*/15 * * * *"
     }
   ],
   "functions": {
@@ -12,6 +16,10 @@
   },
   "rewrites": [
     { "source": "/api/olx/callback", "destination": "/api/olx/callback" },
-    { "source": "/api/cron/olx", "destination": "/api/cron/olx" }
+    { "source": "/api/cron/olx", "destination": "/api/cron/olx" },
+    {
+      "source": "/api/cron/olx-messages",
+      "destination": "/api/cron/olx-messages"
+    }
   ]
 }

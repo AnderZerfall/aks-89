@@ -140,6 +140,15 @@ async function synchronizeProduct({
   syncCutoff: Date;
   counts: SyncCounts;
 }): Promise<void> {
+  if (product.isActive === false) {
+    Logger.info("Skipping inactive Uspacy product", {
+      productId: product.id,
+      article: product.article,
+    });
+    counts.skipped++;
+    return;
+  }
+
   if (!product.article) {
     Logger.warn("Skipping Uspacy product without an article", {
       productId: product.id,

@@ -23,7 +23,13 @@ export const OLX_ROUTES = {
   },
   getThreads: {
     method: "GET",
-    url: "https://www.olx.ua/api/partner/threads",
+    url: (offset: number, limit: number) => {
+      const query = new URLSearchParams({
+        offset: String(offset),
+        limit: String(limit),
+      });
+      return `https://www.olx.ua/api/partner/threads?${query}`;
+    },
   },
   getMessages: {
     method: "GET",
@@ -98,6 +104,23 @@ export const USPACY_ROUTES = {
       return `${USPACY_API_BASE_URL}/files/v1/files?${query}`;
     },
   },
+  searchContacts: {
+    method: "GET",
+    url: (phone?: string, email?: string) => {
+      const query = new URLSearchParams();
+      if (phone) query.set("phone", phone);
+      if (email) query.set("email", email);
+      return `${USPACY_API_BASE_URL}/crm/v1/entities/contacts?${query}`;
+    },
+  },
+  createContact: {
+    method: "POST",
+    url: `${USPACY_API_BASE_URL}/cxm/v1/entities/contacts`,
+  },
+  createLead: {
+    method: "POST",
+    url: `${USPACY_API_BASE_URL}/crm/v1/entities/leads`,
+  },
   createEntity: {
     method: "POST",
     url: `${USPACY_INCOMMING_WEBHOOK}/crm/v1/entity`,
@@ -116,6 +139,20 @@ export const USPACY_ROUTES = {
     method: "GET",
     url: (productId: string) =>
       `${USPACY_INCOMMING_WEBHOOK}/crm/v1/static/products/${productId}`,
+  },
+  getDeal: {
+    method: "GET",
+    url: (dealId: string) => `${USPACY_API_BASE_URL}/gateway/v1/deals/${dealId}`,
+  },
+  getDealProducts: {
+    method: "GET",
+    url: (dealId: string) => {
+      const query = new URLSearchParams({
+        entity_type: "deals",
+        entity_id: dealId,
+      });
+      return `${USPACY_API_BASE_URL}/crm/v1/static/entity-product-lists?${query}`;
+    },
   },
   listProducts: {
     method: "GET",

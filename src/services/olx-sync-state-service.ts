@@ -4,6 +4,10 @@ import { z } from "zod";
 const SyncTimestampSchema = z.iso.datetime({ offset: true });
 const LAST_SYNC_KEY = "olx-sync:last-successful-at";
 const IMPORTED_PRODUCT_SYNC_KEY_PREFIX = "olx-sync:imported-product:";
+const OLX_CONTACT_ID_PREFIX = "olx-leads:contact:";
+const OLX_THREAD_PROCESSED_PREFIX = "olx-leads:processed:";
+const OLX_THREAD_LOCK_PREFIX = "olx-leads:lock:";
+const OLX_THREAD_LOCK_SECONDS = 900;
 
 export const OlxSyncStateService = {
   getLastSuccessfulSync: async (): Promise<Date | null> => {
@@ -34,6 +38,40 @@ export const OlxSyncStateService = {
       getImportedProductSyncKey(article),
       SyncTimestampSchema.parse(timestamp.toISOString()),
     );
+  },
+  getOlxContactId: async (interlocutorId: number): Promise<string | null> => {
+    return createRedisClient().get<string>(
+      `${OLX_CONTACT_ID_PREFIX}${interlocutorId}`,
+    );
+  },
+  saveOlxContactId: async (
+    interlocutorId: number,
+    contactId: string,
+  ): Promise<void> => {
+    await createRedisClient().set(
+      `${OLX_CONTACT_ID_PREFIX}${interlocutorId}`,
+      contactId,
+    );
+  },
+  hasProcessedOlxThread: async (threadUuid: string): Promise<boolean> => {
+    return (
+      (await createRedisClient().get<string>(
+        `${OLX_THREAD_PROCESSED_PREFIX}${threadUuid}`,
+      )) !== null
+    );
+  },
+  claimOlxThread: async (threadUuid: string): Promise<boolean> => {
+    const result = await createRedisClient().set(
+      `${OLX_THREAD_LOCK_PREFIX}${threadUuid}`,
+      "processing",
+      { nx: true, ex: OLX_THREAD_LOCK_SECONDS },
+    );
+    return result === "OK";
+  },
+  markOlxThreadProcessed: async (threadUuid: string): Promise<void> => {
+    const redis = createRedisClient();
+    await redis.set(`${OLX_THREAD_PROCESSED_PREFIX}${threadUuid}`, "done");
+    await redis.del(`${OLX_THREAD_LOCK_PREFIX}${threadUuid}`);
   },
 };
 
