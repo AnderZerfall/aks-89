@@ -58,7 +58,7 @@ export const OlxLeadPayloadSchema = z.object({
   title: z.string().trim().min(1),
   source: z.literal("OLX"),
   comments: z.string().trim().min(1),
-  contacts: z.number().int().positive(),
+  contacts: z.array(z.number().int().positive()).min(1),
 });
 
 export const OlxLeadRequestSchema = OlxLeadPayloadSchema;

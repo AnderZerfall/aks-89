@@ -221,7 +221,7 @@ async function processThread({
           productReference,
           advertReference,
         ].join(COMMENT_SEPARATOR),
-        contacts: Number(contact.id),
+        contacts: [Number(contact.id)],
       },
     });
 
