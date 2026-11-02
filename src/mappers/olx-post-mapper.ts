@@ -16,10 +16,22 @@ import { ProductCategoryMapper } from "./product-category-mapper.js";
 
 const ATTRIBUTES_OPEN_TAG = "[Атрибути]";
 const ATTRIBUTES_CLOSE_TAG = "[/Атрибути]";
-const METADATA_LINE_SEPARATOR = "\n";
+const METADATA_LINE_SEPARATOR = "<br>";
 const ATTRIBUTE_VALUE_SEPARATOR = ", ";
 const LOCATION_SECTION_TITLE = "ЛОКАЦІЯ";
 const ATTRIBUTES_SECTION_TITLE = "ХАРАКТЕРИСТИКИ";
+const EMPTY_STRING = "";
+const BLANK_METADATA_LINE = EMPTY_STRING;
+const DESCRIPTION_SECTION_SEPARATOR = "\n\n";
+const SAFE_METADATA_SEPARATOR = " ";
+const ACTIVE_ADVERT_STATUS = "active";
+const INVALID_PRICE_ERROR = (value: string | number) =>
+  `Invalid OLX price value: ${value}`;
+const METADATA_BULLET_PREFIX = "• ";
+const METADATA_KEY_VALUE_SEPARATOR = ": ";
+const COORDINATE_SEPARATOR = ", ";
+const LINK_PROTOCOL_PATTERN = /^https?:\/\//i;
+const UNSAFE_METADATA_CHARACTERS_PATTERN = /[\r\n|]+/g;
 
 export const OlxPostMapper = {
   toDomain,
@@ -28,18 +40,18 @@ export const OlxPostMapper = {
 function toDomain(dto: OlxEnrichedAdvert): CreateProductRequest {
   const priceValue = Number(dto.price.value);
   if (!Number.isFinite(priceValue)) {
-    throw new Error(`Invalid OLX price value: ${dto.price.value}`);
+    throw new Error(INVALID_PRICE_ERROR(dto.price.value));
   }
   const currency = dto.price.currency;
 
-  const isActive = dto.status === "active";
+  const isActive = dto.status === ACTIVE_ADVERT_STATUS;
   const availability: ProductAvailability = isActive
     ? ProductAvailability.Available
     : ProductAvailability.NotAvailable;
 
-  const cleanLink = (dto.url || dto.externalUrl || "").replace(
-    /^https?:\/\//i,
-    "",
+  const cleanLink = (dto.url || dto.externalUrl || EMPTY_STRING).replace(
+    LINK_PROTOCOL_PATTERN,
+    EMPTY_STRING,
   );
 
   return {
@@ -56,7 +68,7 @@ function toDomain(dto: OlxEnrichedAdvert): CreateProductRequest {
       buildCrmSyncBlock(dto),
     ]
       .filter(Boolean)
-      .join("\n\n"),
+      .join(DESCRIPTION_SECTION_SEPARATOR),
     link: cleanLink,
     prices: [
       {
@@ -82,7 +94,7 @@ function buildCrmSyncBlock(dto: OlxEnrichedAdvert): string {
       LocationCommentKey.address,
       dto.enrichedLocation.address || Placeholder.NotFound,
     ),
-    "",
+    BLANK_METADATA_LINE,
     ATTRIBUTES_SECTION_TITLE,
   ];
 
@@ -110,15 +122,17 @@ function buildCrmSyncBlock(dto: OlxEnrichedAdvert): string {
 }
 
 function formatMetadataLine(key: string, value: string): string {
-  const safeValue = value.replace(/[\r\n|]+/g, " ").trim();
-  return `• ${key}: ${safeValue}`;
+  const safeValue = value
+    .replace(UNSAFE_METADATA_CHARACTERS_PATTERN, SAFE_METADATA_SEPARATOR)
+    .trim();
+  return `${METADATA_BULLET_PREFIX}${key}${METADATA_KEY_VALUE_SEPARATOR}${safeValue}`;
 }
 
 function getCoordinates(dto: OlxEnrichedAdvert): string {
   const { latitude, longitude } = dto.location ?? {};
   return latitude != null && longitude != null
-    ? `${latitude}, ${longitude}`
-    : "";
+    ? `${latitude}${COORDINATE_SEPARATOR}${longitude}`
+    : EMPTY_STRING;
 }
 
 function getAttributeValues(attribute: OlxAdvertAttribute): string[] {

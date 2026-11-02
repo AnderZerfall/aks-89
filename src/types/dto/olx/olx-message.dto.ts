@@ -8,20 +8,27 @@ export const OlxAttachmentsSchema = z
   })
   .loose();
 
-export const OlxMessageResponseSchema = z.array(
+const OlxMessageDtoSchema = z
+  .object({
+    uuid: z.string(),
+    threadUuid: z.string(),
+    createdAt: z.string(),
+    type: OlxMessageSchema,
+    text: z.string(),
+    attachments: z.array(OlxAttachmentsSchema).nullable(),
+    isRead: z.boolean(),
+    csv: z.array(OlxAttachmentsSchema).nullable(),
+  })
+  .loose();
+
+const OlxMessageListSchema = z.array(OlxMessageDtoSchema);
+
+export const OlxMessageResponseSchema = z.union([
+  OlxMessageListSchema,
   z
-    .object({
-      uuid: z.string(),
-      threadUuid: z.string(),
-      createdAt: z.string(),
-      type: OlxMessageSchema,
-      text: z.string(),
-      attachments: z.array(OlxAttachmentsSchema).nullable(),
-      isRead: z.boolean(),
-      csv: z.array(OlxAttachmentsSchema).nullable(),
-    })
-    .loose(),
-);
+    .object({ data: OlxMessageListSchema })
+    .transform(({ data }) => data),
+]);
 
 export type OlxAttachments = z.infer<typeof OlxAttachmentsSchema>;
 export type OlxMessageResponseDto = z.infer<typeof OlxMessageResponseSchema>;

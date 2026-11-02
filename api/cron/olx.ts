@@ -99,9 +99,27 @@ async function importOlxPostsToUspacy(
     const createdProduct = await UspacyService.createProduct({
       payload: OlxPostMapper.toDomain(post),
     });
+    const imageUrls = post.images?.map((image) => image.url) ?? [];
+    const fileIds = imageUrls.length
+      ? await UspacyService.uploadProductImages({
+          productId: createdProduct.id,
+          imageUrls,
+        })
+      : [];
+    const syncedProduct = fileIds.length
+      ? await UspacyService.updateProduct({
+          productId: createdProduct.id,
+          payload: {
+            ...createdProduct,
+            previewImageId: fileIds[0],
+            foto: fileIds.slice(1),
+          },
+        })
+      : createdProduct;
+
     await OlxSyncStateService.saveImportedProductSyncAt(
       article,
-      getProductSyncTimestamp(createdProduct) ?? new Date(),
+      getProductSyncTimestamp(syncedProduct) ?? new Date(),
     );
     existingArticles.add(article);
     counts.imported++;

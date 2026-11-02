@@ -90,6 +90,7 @@ export const ProductSchema = z
       .optional()
       .transform((link) => link ?? undefined),
     prices: z.array(PriceSchema),
+    previewImageId: ProductFileIdSchema.nullable().optional(),
     files: z.array(ProductFileSchema).optional(),
     foto: ProductFileIdsSchema,
     additional: z

@@ -104,6 +104,10 @@ export const USPACY_ROUTES = {
       return `${USPACY_API_BASE_URL}/files/v1/files?${query}`;
     },
   },
+  uploadFiles: {
+    method: "POST",
+    url: `${USPACY_API_BASE_URL}/files/v1/files`,
+  },
   searchContacts: {
     method: "GET",
     url: (phone?: string, email?: string) => {

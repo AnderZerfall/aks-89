@@ -57,6 +57,21 @@ const UspacyFilesResponseSchema = z.object({
       .loose(),
   ),
 });
+const UspacyUploadedFilesResponseSchema = z.object({
+  data: z.array(
+    z
+      .object({
+        id: z.union([z.number(), z.string()]),
+      })
+      .loose(),
+  ),
+});
+const UPLOAD_ENTITY_TYPE_FIELD = "entityType";
+const UPLOAD_ENTITY_ID_FIELD = "entityId";
+const UPLOAD_FILES_FIELD = "files[]";
+const PRODUCT_ENTITY_TYPE = "products";
+const OLX_IMAGE_FILE_NAME_PREFIX = "olx-image-";
+const OLX_IMAGE_HOST_SUFFIXES = [".olx.ua", ".olxcdn.com"];
 
 let cachedAccessToken: { token: string; expiresAt: number } | undefined;
 
@@ -176,6 +191,76 @@ export const UspacyService = {
       const url = urlsById.get(fileId);
       return url ? [url] : [];
     });
+  },
+  uploadProductImages: async ({
+    productId,
+    imageUrls,
+  }: {
+    productId: string;
+    imageUrls: string[];
+  }): Promise<string[]> => {
+    const entityId = Number(productId);
+    if (!Number.isSafeInteger(entityId) || entityId <= 0) {
+      throw new Error(
+        `Cannot upload Uspacy files for product ${productId}: product ID must be a positive integer`,
+      );
+    }
+
+    const formData = new FormData();
+    formData.append(UPLOAD_ENTITY_TYPE_FIELD, PRODUCT_ENTITY_TYPE);
+    formData.append(UPLOAD_ENTITY_ID_FIELD, String(entityId));
+
+    for (const [index, imageUrl] of imageUrls.entries()) {
+      const sourceUrl = validateOlxImageUrl(imageUrl);
+      const imageResponse = await fetch(sourceUrl);
+      if (!imageResponse.ok) {
+        throw new Error(
+          `OLX image download failed [${imageResponse.status}] for ${sourceUrl.hostname}`,
+        );
+      }
+
+      const image = await imageResponse.blob();
+      if (!image.type.startsWith("image/")) {
+        throw new Error(
+          `OLX image response has an invalid content type for ${sourceUrl.hostname}`,
+        );
+      }
+
+      formData.append(
+        UPLOAD_FILES_FIELD,
+        image,
+        `${OLX_IMAGE_FILE_NAME_PREFIX}${index + 1}`,
+      );
+    }
+
+    const response = await fetch(USPACY_ROUTES.uploadFiles.url, {
+      method: USPACY_ROUTES.uploadFiles.method,
+      headers: {
+        Authorization: `Bearer ${await getUspacyAccessToken()}`,
+      },
+      body: formData,
+    });
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(
+        `Uspacy file upload failed [${response.status}]: ${errorBody}`,
+      );
+    }
+
+    const { data } = UspacyUploadedFilesResponseSchema.parse(
+      await response.json(),
+    );
+    if (data.length !== imageUrls.length) {
+      throw new Error(
+        `Uspacy uploaded ${data.length} files for ${imageUrls.length} OLX images`,
+      );
+    }
+
+    Logger.info("Uploaded OLX images to Uspacy", {
+      productId,
+      fileCount: data.length,
+    });
+    return data.map(({ id }) => String(id));
   },
   getProduct: async (productId: string) => {
     const response = await createRequest(
@@ -423,4 +508,18 @@ async function getUspacyAccessToken(): Promise<string> {
     };
   }
   return signInResponse.jwt;
+}
+
+function validateOlxImageUrl(imageUrl: string): URL {
+  const sourceUrl = new URL(imageUrl);
+  if (
+    sourceUrl.protocol !== "https:" ||
+    !OLX_IMAGE_HOST_SUFFIXES.some((suffix) =>
+      sourceUrl.hostname.endsWith(suffix),
+    )
+  ) {
+    throw new Error(`Unsupported OLX image URL host: ${sourceUrl.hostname}`);
+  }
+
+  return sourceUrl;
 }
