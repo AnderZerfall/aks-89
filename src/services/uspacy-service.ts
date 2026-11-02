@@ -74,6 +74,16 @@ const UPLOAD_FILES_FIELD = "files[]";
 const PRODUCT_ENTITY_TYPE = "products";
 const OLX_IMAGE_FILE_NAME_PREFIX = "olx-image-";
 const OLX_IMAGE_HOST_SUFFIXES = [".olx.ua", ".olxcdn.com"];
+const IMAGE_EXTENSION_BY_MIME_TYPE: Record<string, string> = {
+  "image/avif": "avif",
+  "image/bmp": "bmp",
+  "image/gif": "gif",
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/png": "png",
+  "image/tiff": "tif",
+  "image/webp": "webp",
+};
 
 let cachedAccessToken: { token: string; expiresAt: number } | undefined;
 
@@ -231,7 +241,7 @@ export const UspacyService = {
       formData.append(
         UPLOAD_FILES_FIELD,
         image,
-        `${OLX_IMAGE_FILE_NAME_PREFIX}${index + 1}`,
+        `${OLX_IMAGE_FILE_NAME_PREFIX}${index + 1}.${getImageFileExtension(image.type)}`,
       );
     }
 
@@ -554,4 +564,15 @@ function validateOlxImageUrl(imageUrl: string): URL {
   }
 
   return sourceUrl;
+}
+
+function getImageFileExtension(contentType: string): string {
+  const normalizedContentType = contentType.split(";")[0]?.trim().toLowerCase();
+  const extension = normalizedContentType
+    ? IMAGE_EXTENSION_BY_MIME_TYPE[normalizedContentType]
+    : undefined;
+  if (!extension) {
+    throw new Error(`Unsupported OLX image content type: ${contentType}`);
+  }
+  return extension;
 }
